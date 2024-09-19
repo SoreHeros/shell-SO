@@ -1,11 +1,16 @@
-p0.out: p0.c pid.o echo.o
-	gcc -Wall -o p0.out p0.c *.o
+p0.out: p0.c p0 lists.o
+	gcc -Wall -o p0.out p0.c *.o p0/*.o
 
-pid.o: p0/pid.c p0/pid.h
-	gcc -c p0/pid.c
+run: p0.out
+	./p0.out
 
-echo.o: p0/echo.c p0/echo.h
-	gcc -c p0/echo.c
+lists.o: lists.c lists.h
+	gcc -c lists.c
+
+.PHONY: p0 clean
+
+p0:
+	cd p0 && make
 
 clean:
-	rm *.out *.o
+	rm *.out *.o p0/*.o

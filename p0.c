@@ -1,35 +1,39 @@
 #include <stdio.h>
 #include <string.h>
 
-
-#include "p0/echo.h"
-#include "p0/pid.h"
+#include "p0/basic_functions.h"
+#include "p0/sys_proc_info.h"
 
 #define INPUT_BUFFER_SIZE 1024
+#define TOKEN_BUFFER_SIZE 128
 
-typedef const struct{
+void help(char **, int);
+void help_help();
+
+//todo
+void historic(char **, int);
+void historic_help();
+
+
+
+const struct{
     char * name;
     void (*function)(char **, int);
     void (*help)();
-}command;
-
-void test_function(char* string, int len);
-void print_prompt();
-
-
-command commands[] =
+}commands[] =
         {
-        {"echo",    echo,   echo_help},
-        {"pid",     pid,    pid_help},
-        };
+                {"quit",         quit,         quit_help},
+                {"exit",         exit_command, exit_help},
+                {"bye",          bye,          bye_help},
+                {"help",         help,         help_help},
+                {"echo",         echo,         echo_help},
+                {"pid",          pid,          pid_help},
+                {"ppid",         ppid,         ppid_help},
+        };//los 3 exits deben estar al principio
 
 //imprime el inicio
 void print_prompt(){
     printf("\033[92mtemporal:\033[0m");
-}
-
-void test_function(char * string, int len){
-    fputs(string, stdout);
 }
 
 //lee la entrada y la procesa en tokens, devuelve 1, si la entrada es demasiado grande devuelve 0
@@ -43,38 +47,85 @@ int read_input(char * string){
     return 1;
 }
 
-//devuelve el número de tokens
+//devuelve el número de tokens, -1 si se ha superado el límite
 int tokenizer(char ** tokens, char * string){
     int i = 1;
 
-    if((tokens[0]= strtok(string, " \n\t"))==NULL)
+    if((tokens[0] = strtok(string, " \n\t"))==NULL)
         return 0;
-    while ((tokens[i] = strtok(NULL, " \n\t")) != NULL)
+    while (i < TOKEN_BUFFER_SIZE && (tokens[i] = strtok(NULL, " \n\t")) != NULL)
         i++;
+
+    if(i >= TOKEN_BUFFER_SIZE)
+        i = -1;
+
+
     return i;
+}
+
+enum{EXIT, NORMAL, HISTORIC};
+
+//interpreta los comandos y devuelve un enum
+int interpretar(char ** tokens, int token_number){
+    if(token_number < 1)
+        return NORMAL;
+
+    for(int i = 0; i < (sizeof(commands) / sizeof(commands[0])); i++) //todo quizás busqueda binaria
+        if(strcmp(tokens[0], commands[i].name) == 0){
+            commands[i].function(&tokens[1], token_number - 1);
+            break;
+        }
+
+    if(!strcmp(tokens[0], "exit") || !strcmp(tokens[0], "quit") || !strcmp(tokens[0], "bye"))
+        return EXIT;
+
+    return NORMAL;
+}
+
+void help(char ** tokens, int token_number){
+    if(token_number == 0) {
+        for (int i = 0; i < (sizeof(commands) / sizeof(commands[0])); i++)
+            commands[i].help();
+    }else{
+        //todo optimizar?
+        for (int i = 0; i < (sizeof(commands) / sizeof(commands[0])); i++)
+            for(int j = 0; j < token_number; j++)
+                if(strcmp(tokens[j], commands[i].name) == 0)
+                    commands[i].help();
+    }
+}
+void help_help(){
+    printf("\thelp [command]\nprints the comand's help\n");
 }
 
 int main(){
     //init
-    int exit = 0;
-    char input_buffer[INPUT_BUFFER_SIZE];
-    char * tokens[INPUT_BUFFER_SIZE];
+    int interpreter_code = NORMAL;
+    char input_buffer[INPUT_BUFFER_SIZE] = {0};
+    char * tokens[TOKEN_BUFFER_SIZE] = {NULL};
     int token_number;
 
     //sección repetida
-    while(!exit){
+    while(interpreter_code != EXIT){
         print_prompt();
 
-
-        if(!read_input(input_buffer)){
+        if(interpreter_code == HISTORIC){
+            //todo substituir el input con un histórico
+        }else if(!read_input(input_buffer)){
             printf("\033[91mERROR EN LA LECTURA DE DATOS: ENTRADA DEMASIADO GRANDE\033[0m\n");
+            //todo añadir al histórico?
             continue;
         }
 
-        token_number = tokenizer(tokens, input_buffer);
+        //todo añadir al histórico
 
-        commands[0].function(tokens, token_number);
-        //exit = 1;
+        if((token_number = tokenizer(tokens, input_buffer)) == -1){
+            printf("\033[91mERROR EN LA CONVERSION A TOKENS: DEMASIADOS TOKENS\033[0m\n");
+            continue;
+        }else if(!token_number)
+            continue;
+
+        interpreter_code = interpretar(tokens, token_number);
     }
 
     //fin
