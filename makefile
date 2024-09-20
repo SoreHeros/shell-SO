@@ -5,12 +5,12 @@ run: p0.out
 	./p0.out
 
 lists.o: lists.c lists.h
-	gcc -c lists.c
-
-.PHONY: p0 clean
+	gcc -Wall -c lists.c
 
 p0:
 	cd p0 && make
+
+.PHONY: clean p0
 
 clean:
 	rm *.out *.o p0/*.o

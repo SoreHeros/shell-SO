@@ -4,6 +4,7 @@
 
 #include "basic_functions.h"
 #include <stdio.h>
+#include <string.h>
 
 void echo(char ** tokens, int token_len){
     for(int i = 0; i < token_len; i++)
@@ -33,4 +34,29 @@ void bye(char ** tokens, int token_number){
 }
 void bye_help(){
     printf("\tbye\nsays goodbye, then closes the shell\n");
+}
+
+void authors(char ** tokens, int token_number){
+    struct{
+        char n;
+        char l;
+    }flags = {0};
+
+    for(int i = 0; i < token_number; i++){
+        if(!strcmp(tokens[i], "-n"))
+            flags.n = 1;
+        else if(!strcmp(tokens[i], "-l"))
+            flags.l = 1;
+    }
+
+    if(!flags.l && !flags.n)
+        flags.l = flags.n = 1;
+
+    if(flags.n)
+        printf("Heros Vicente Gonzalez\n");
+    if(flags.l)
+        printf("heros.vicente@udc.es\n");
+}
+void authors_help(){
+    printf("\tauthors [-l|-n]\nempty:\tprints author's name and login\n-n:\tprints author's name\n-l\tprints author's login\n");
 }

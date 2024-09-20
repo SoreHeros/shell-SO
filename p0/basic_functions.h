@@ -13,8 +13,6 @@ void exit_command(char **, int);
 void exit_help();
 void bye(char **, int);
 void bye_help();
-
-//todo
 void authors(char **, int);
 void authors_help();
 

@@ -26,6 +26,7 @@ const struct{
                 {"exit",         exit_command, exit_help},
                 {"bye",          bye,          bye_help},
                 {"help",         help,         help_help},
+                {"authors",      authors,      authors_help},
                 {"echo",         echo,         echo_help},
                 {"pid",          pid,          pid_help},
                 {"ppid",         ppid,         ppid_help},
@@ -95,7 +96,7 @@ void help(char ** tokens, int token_number){
     }
 }
 void help_help(){
-    printf("\thelp [command]\nprints the comand's help\n");
+    printf("\thelp [cmd]\nempty:\tprints every command's help\ncmd:\tprints the comand's help\n");
 }
 
 int main(){
