@@ -30,7 +30,7 @@ const struct{
                 {"echo",         echo,         echo_help},
                 {"pid",          pid,          pid_help},
                 {"ppid",         ppid,         ppid_help},
-        };//los 3 exits deben estar al principio
+        };
 
 //imprime el inicio
 void print_prompt(){
