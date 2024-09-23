@@ -30,6 +30,7 @@ const struct{
                 {"echo",         echo,         echo_help},
                 {"pid",          pid,          pid_help},
                 {"ppid",         ppid,         ppid_help},
+                {"infosys",      infosys,      infosys_help}
         };
 
 //imprime el inicio
@@ -85,14 +86,18 @@ int interpretar(char ** tokens, int token_number){
 
 void help(char ** tokens, int token_number){
     if(token_number == 0) {
-        for (int i = 0; i < (sizeof(commands) / sizeof(commands[0])); i++)
+        for (int i = 0; i < (sizeof(commands) / sizeof(commands[0])); i++) {
+            printf("\n");
             commands[i].help();
+        }
     }else{
         //todo optimizar?
         for (int i = 0; i < (sizeof(commands) / sizeof(commands[0])); i++)
             for(int j = 0; j < token_number; j++)
-                if(strcmp(tokens[j], commands[i].name) == 0)
+                if(strcmp(tokens[j], commands[i].name) == 0) {
+                    printf("\n");
                     commands[i].help();
+                }
     }
 }
 void help_help(){

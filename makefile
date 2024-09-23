@@ -1,15 +1,18 @@
-objects = $(patsubst %.c, %.o, $(wildcard p0/*.c) lists.c)
+result = p0.out
+main = p0.c
+objects = $(patsubst %.c, %.o, lists.c $(wildcard p0/*.c))
 
-p0.out: p0.c $(objects)
-	gcc -Wall -o p0.out p0.c *.o p0/*.o
+$(result): $(main) $(objects)
+	gcc -Wall -o $(result) $(main) $(objects)
 
-run: p0.out
-	./p0.out
-
+#compilar todos los objetos
 %.o: %.c %.h
 	gcc -Wall -c $< -o $@
 
-.PHONY: clean
+.PHONY: clean run
+
+run: $(result)
+	./$(result)
 
 clean:
-	rm *.out *.o p0/*.o
+	rm $(result) $(objects)

@@ -5,8 +5,10 @@
 #include "sys_proc_info.h"
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <string.h>
+#include "../lists.h"
 
 void pid(char ** tokens, int token_len){
     printf("%i\n", getpid());
@@ -22,38 +24,6 @@ void ppid_help(){
     printf("\tppid\nprints this shell's partent pid number\n");
 }
 
-//       uname [OPTION]...
-//
-//DESCRIPTION
-//       Print certain system information.  With no OPTION, same as -s.
-//
-//       -a, --all
-//              print  all  information,  in the following order, except omit -p
-//              and -i if unknown:
-//
-//       -s, --kernel-name
-//              print the kernel name
-//
-//       -n, --nodename
-//              print the network node hostname
-//
-//       -r, --kernel-release
-//              print the kernel release
-//
-//       -v, --kernel-version
-//              print the kernel version
-//
-//       -m, --machine
-//              print the machine hardware name
-//
-//       -p, --processor
-//              print the processor type (non-portable)
-//
-//       -i, --hardware-platform
-//              print the hardware platform (non-portable)
-//
-//       -o, --operating-system
-//              print the operating system
 void infosys(char ** tokens, int token_number){
     struct{
         char s;
@@ -103,6 +73,29 @@ void infosys(char ** tokens, int token_number){
     if(!flags.s && !flags.i && !flags.m && !flags.n && !flags.o && !flags.p && !flags.r && !flags.v)
         flags.s = 1;
 
+    struct utsname utsname;
+
+    uname(&utsname);
+
+
+
+    if(flags.s)
+        printf("%s\n", utsname.sysname);
+    if(flags.n)
+        printf("%s\n", utsname.nodename);
+    if(flags.r)
+        printf("%s\n", utsname.release);
+    if(flags.v)
+        printf("%s\n", utsname.version);
+    if(flags.m)
+        printf("%s\n", utsname.machine);
+    if(flags.p)
+        printf("a\n");
+    if(flags.i)
+        printf("a\n");
+    if(flags.o)
+        printf("a\n");
+
     //todo info del sistema
 }
 void infosys_help(){
@@ -113,5 +106,8 @@ void infosys_help(){
     printf("-n:\tprints the network node hostname\n");
     printf("-r:\tprints the kernel release\n");
     printf("-v:\tprints the kernel version\n");
-    printf("-m:\t");
+    printf("-m:\tprints the machine name\n");
+    printf("-p:\tprints the processor type\n");
+    printf("-i:\tprints the hardware platform\n");
+    printf("-o:\tprints the operative system\n");
 }
