@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "lists.h"
 
 #include "p0/basic_functions.h"
 #include "p0/sys_proc_info.h"
@@ -10,9 +11,16 @@
 void help(char **, int);
 void help_help();
 
+list historial;
+
 //todo
-void historic(char **, int);
-void historic_help();
+void historic(char **, int){
+    for(int i = 0, len = list_length(historial); i < len; i++)
+        printf("%s\n", (char *)list_get(historial, i));
+}
+void historic_help(){
+    printf("test\n");
+}
 
 
 
@@ -30,7 +38,8 @@ const struct{
                 {"echo",         echo,         echo_help},
                 {"pid",          pid,          pid_help},
                 {"ppid",         ppid,         ppid_help},
-                {"infosys",      infosys,      infosys_help}
+                {"infosys",      infosys,      infosys_help},
+                {"historic",      historic,      historic_help},
         };
 
 //imprime el inicio
@@ -65,7 +74,7 @@ int tokenizer(char ** tokens, char * string){
     return i;
 }
 
-enum{EXIT, NORMAL, HISTORIC};
+enum{EXIT, NORMAL};
 
 //interpreta los comandos y devuelve un enum
 int interpretar(char ** tokens, int token_number){
@@ -110,20 +119,19 @@ int main(){
     char input_buffer[INPUT_BUFFER_SIZE] = {0};
     char * tokens[TOKEN_BUFFER_SIZE] = {NULL};
     int token_number;
+    historial = list_new();
 
     //sección repetida
     while(interpreter_code != EXIT){
         print_prompt();
 
-        if(interpreter_code == HISTORIC){
-            //todo substituir el input con un histórico
-        }else if(!read_input(input_buffer)){
+        if(!read_input(input_buffer)){
             printf("\033[91mERROR EN LA LECTURA DE DATOS: ENTRADA DEMASIADO GRANDE\033[0m\n");
             //todo añadir al histórico?
             continue;
         }
 
-        //todo añadir al histórico
+        list_append(&historial, strdup(input_buffer));
 
         if((token_number = tokenizer(tokens, input_buffer)) == -1){
             printf("\033[91mERROR EN LA CONVERSION A TOKENS: DEMASIADOS TOKENS\033[0m\n");
@@ -135,5 +143,6 @@ int main(){
     }
 
     //fin
+    list_free(&historial);
     return 0;
 }

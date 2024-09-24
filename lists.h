@@ -5,6 +5,23 @@
 #ifndef SHELL_SO_LISTS_H
 #define SHELL_SO_LISTS_H
 
-void test();
+struct node;
+
+typedef struct node * list;
+
+//mem management instructions
+list list_new();
+void list_free(list * l);
+
+//list management
+void list_append(list * l , void * element);
+void list_remove(list * l, int pos);
+void list_add(list * l, int pos, void * element);
+
+//element management
+void * list_get(list l, int pos);
+void list_set(list l, int pos, void * element);
+int list_search(list l, void * element, int (*comparator)(const void *, const void *));
+int list_length(list l);
 
 #endif //SHELL_SO_LISTS_H

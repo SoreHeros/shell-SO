@@ -24,6 +24,8 @@ void ppid_help(){
     printf("\tppid\nprints this shell's partent pid number\n");
 }
 
+
+//todo redo
 void infosys(char ** tokens, int token_number){
     struct{
         char s;
@@ -70,8 +72,11 @@ void infosys(char ** tokens, int token_number){
     }
 
     //comprobar caso por defecto
-    if(!flags.s && !flags.i && !flags.m && !flags.n && !flags.o && !flags.p && !flags.r && !flags.v)
-        flags.s = 1;
+    if(!flags.s && !flags.i && !flags.m && !flags.n && !flags.o && !flags.p && !flags.r && !flags.v) {
+        flags.n = 1;
+        flags.v = 1;
+        flags.r = 1;
+    }
 
     struct utsname utsname;
 
@@ -80,27 +85,33 @@ void infosys(char ** tokens, int token_number){
 
 
     if(flags.s)
-        printf("%s\n", utsname.sysname);
+        printf("%s ", utsname.sysname);
     if(flags.n)
-        printf("%s\n", utsname.nodename);
+        printf("%s ", utsname.nodename);
     if(flags.r)
-        printf("%s\n", utsname.release);
+        printf("%s ", utsname.release);
     if(flags.v)
-        printf("%s\n", utsname.version);
+        printf("%s ", utsname.version);
     if(flags.m)
-        printf("%s\n", utsname.machine);
+        printf("%s ", utsname.machine);
     if(flags.p)
-        printf("a\n");
+        printf("%s ", utsname.machine);
     if(flags.i)
-        printf("a\n");
+        printf("%s ", utsname.machine);
     if(flags.o)
-        printf("a\n");
+        #if defined(_win32)
+            printf("WINDOWS\n");
+        #elif defined(unix)
+            printf("UNIX\n");
+        #else
+            printf("unknown\n");
+        #endif
 
-    //todo info del sistema
+    printf("\n");
 }
 void infosys_help(){
     printf("\tinfosys [-a|-s|-n|-r|-v|-m|-p|-i|-o]\n");
-    printf("empty:\tsame as -s\n");
+    printf("empty:\tsame as -n -r -v\n");
     printf("-a:\tprints all system info\n");
     printf("-s:\tprints kernel name\n");
     printf("-n:\tprints the network node hostname\n");
