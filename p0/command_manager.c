@@ -45,10 +45,10 @@ static list historial;
 //todo
 void historic(char **, int){
     for(int i = 0, len = list_length(historial); i < len; i++)
-        printf("%s\n", (char *)list_get(historial, i));
+        printf("%3i: %s", i,(char *)list_get(historial, i));
 }
 void historic_help(){
-    printf("\thistoric [something]\nempty:\tprints every command you made\nsomething:\tdoes something\n");
+    printf("\thistoric [N | -N]\nempty:\tprints every command you made\nN:\trepeats command N from the historic\n-N:\tprints the last N commands\n");
 }
 
 void help(char ** tokens, int token_number){

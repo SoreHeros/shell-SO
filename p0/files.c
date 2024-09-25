@@ -88,7 +88,7 @@ void close_help(){
 void list_files(char ** tokens, int token_number){
     for(int i = 0; i < list_length(open_files); i++){
         file * f = list_get(open_files, i);
-        printf("%s\n", f->name);
+        printf("%3i: %s\n", i, f->name);
     }
 }
 void list_files_help(){
