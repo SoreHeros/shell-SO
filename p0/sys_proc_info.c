@@ -8,9 +8,9 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <string.h>
-#include "../lists.h"
+#include "lists.h"
 
-void pid(char ** tokens, int token_len){
+void pid(char **, int){
     printf("%i\n", getpid());
 }
 void pid_help(){
@@ -81,8 +81,6 @@ void infosys(char ** tokens, int token_number){
     struct utsname utsname;
 
     uname(&utsname);
-
-
 
     if(flags.s)
         printf("%s ", utsname.sysname);

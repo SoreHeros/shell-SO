@@ -1,6 +1,6 @@
 result = p0.out
 main = p0.c
-objects = $(patsubst %.c, %.o, lists.c $(wildcard p0/*.c))
+objects = $(patsubst %.c, %.o, $(wildcard p0/*.c))
 
 $(result): $(main) $(objects)
 	gcc -Wall -o $(result) $(main) $(objects)
@@ -9,10 +9,13 @@ $(result): $(main) $(objects)
 %.o: %.c %.h
 	gcc -Wall -c $< -o $@
 
-.PHONY: clean run
+.PHONY: clean run leak
 
 run: $(result)
 	./$(result)
+
+leak: $(result)
+	valgrind --leak-check=full ./$(result)
 
 clean:
 	rm $(result) $(objects)

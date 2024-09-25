@@ -5,6 +5,7 @@
 #include "lists.h"
 #include <stdlib.h>
 
+//todo hacerlas por array reservado de forma dinámica
 typedef struct node{
     void * data;
     struct node * next;
