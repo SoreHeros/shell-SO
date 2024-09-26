@@ -19,28 +19,28 @@ typedef struct{
 #include "files.h"
 
 void files_init(){
-    open_files = list_new();
+    open_files = list_init();
 
     file *f1 = malloc(sizeof(file));
 
     f1->name = strdup("stdin");
     f1->stream = stdin;
 
-    list_append(&open_files, f1);
+    list_append(open_files, f1);
 
     file *f2 = malloc(sizeof(file));
 
     f2->name = strdup("stdout");
     f2->stream = stdout;
 
-    list_append(&open_files, f2);
+    list_append(open_files, f2);
 
     file *f3 = malloc(sizeof(file));
 
     f3->name = strdup("stderr");
     f3->stream = stderr;
 
-    list_append(&open_files, f3);
+    list_append(open_files, f3);
 }
 void files_exit(){
     for(int i = 0; i < list_length(open_files); i++){
@@ -49,7 +49,7 @@ void files_exit(){
         fclose(f->stream);
     }
 
-    list_free(&open_files);
+    list_free(open_files);
 }
 
 void open(char ** tokens, int token_number){
@@ -65,7 +65,7 @@ void open(char ** tokens, int token_number){
     opened_file->stream = f;
     opened_file->name = strdup(tokens[0]);
 
-    list_append(&open_files, opened_file);
+    list_append(open_files, opened_file);
 }
 void open_help(){
     printf("test");
@@ -77,7 +77,7 @@ void close(char ** tokens, int token_number){
             free(f->name);
             fclose(f->stream);
             free(f);
-            list_remove(&open_files, i);
+            list_remove(open_files, i);
             i--;
         }
     }

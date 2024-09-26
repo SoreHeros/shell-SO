@@ -89,7 +89,7 @@ int bsearch_comparator(const void * key, const void * data){
 
 
 void command_manager_init(){
-    historial = list_new();
+    historial = list_init();
     commands_pointer = malloc(commands_len * sizeof(command_entry *));
     for(int i = 0; i < commands_len; i++)
         commands_pointer[i] = &commands[i];
@@ -97,7 +97,7 @@ void command_manager_init(){
     files_init();
 }
 void command_manager_exit(){
-    list_free(&historial);
+    list_free(historial);
     free(commands_pointer);
     files_exit();
 }
@@ -108,7 +108,7 @@ command_entry get_command(char * command_name){
     return **comm;
 }
 void history_append(char * entry){
-    list_append(&historial, strdup(entry));
+    list_append(historial, strdup(entry));
 }
 int tokenize(char ** tokens, char * string){
     int i = 1;

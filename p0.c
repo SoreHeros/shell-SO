@@ -28,7 +28,7 @@ int main(){
     char input_buffer[INPUT_BUFFER_SIZE] = {0};
     char * tokens[TOKEN_BUFFER_SIZE] = {NULL};
     int token_number;
-    //historial = list_new();
+    //historial = list_init();
 
     //sección repetida
     while(interpreter_code != EXIT){
