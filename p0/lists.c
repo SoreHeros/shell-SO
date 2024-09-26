@@ -16,7 +16,7 @@ struct list{
 };
 
 int resize_list(list l){
-    void * aux = realloc(l->data, l->data_len * 2);
+    void * aux = realloc(l->data, l->data_len * 2 * sizeof(void *));
     if(aux == NULL){
         return 0;
     }
