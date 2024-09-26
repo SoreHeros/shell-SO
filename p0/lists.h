@@ -5,12 +5,11 @@
 #ifndef SHELL_SO_LISTS_H
 #define SHELL_SO_LISTS_H
 
-struct node;
 
-typedef struct node * list;
+typedef struct list list;
 
 //mem management instructions
-list list_new();
+list list_init();
 void list_free(list * l);
 
 //list management
