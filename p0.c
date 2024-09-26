@@ -1,5 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
+#include <stdlib.h>
+
+void sig_handler(int);
+int signal_out = 0;
 
 #include "p0/command_manager.h"
 
@@ -23,15 +28,15 @@ int read_input(char * string){
 
 int main(){
     //init
+    signal(SIGINT,sig_handler);
     command_manager_init();
     int interpreter_code = NORMAL;
     char input_buffer[INPUT_BUFFER_SIZE] = {0};
     char * tokens[TOKEN_BUFFER_SIZE] = {NULL};
     int token_number;
-    //historial = list_init();
 
     //sección repetida
-    while(interpreter_code != EXIT){
+    while(interpreter_code != EXIT && !signal_out){
         print_prompt();
 
         if(!read_input(input_buffer)){
@@ -60,8 +65,19 @@ int main(){
 
         comm.command(&tokens[1], token_number - 1);
     }
-
     //fin
     command_manager_exit();
     return 0;
+}
+
+void sig_handler(int sig){
+    printf("\n");
+    switch (sig) {
+        case SIGINT:
+            signal_out = 1;
+
+            break;
+        default:
+            abort();
+    }
 }

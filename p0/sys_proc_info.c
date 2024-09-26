@@ -17,7 +17,7 @@ void pid_help(){
     printf("\tpid\nprints this shell's pid number\n");
 }
 
-void ppid(char ** tokens, int token_len){
+void ppid(char **, int){
     printf("%i\n", getppid());
 }
 void ppid_help(){

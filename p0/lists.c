@@ -41,13 +41,14 @@ void list_free(list l){
     l->data = NULL;
     l->list_len = 0;
     l->data_len = 0;
+    free(l);
 }
 
 //list management
 void list_append(list l , void * element){
     if(l->list_len >= l->data_len){
         if(!resize_list(l)){
-            perror("ERROR AL AUMENTAR EL TAMANO DE LA LISTA: ");
+            perror("ERROR AL AUMENTAR EL TAMANO DE LA LISTA");
             return;
         }
     }
@@ -61,7 +62,7 @@ void list_remove(list l, int pos){
 void list_add(list l, int pos, void * element){
     if(l->list_len >= l->data_len){
         if(!resize_list(l)){
-            perror("ERROR AL AUMENTAR EL TAMANO DE LA LISTA: ");
+            perror("ERROR AL AUMENTAR EL TAMANO DE LA LISTA");
             return;
         }
     }
@@ -69,6 +70,7 @@ void list_add(list l, int pos, void * element){
     for(int i = l->list_len; i > pos; i--)
         l->data[i] = l->data[i - 1];
     l->data[pos] = element;
+    l->list_len++;
 }
 
 //element management

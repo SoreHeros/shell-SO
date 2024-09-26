@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "lists.h"
+#include "files.h"
 
 list open_files;
 typedef enum {READ = 0x1, WRITE = 0x2, BINARY = 0x4, }MODE;
@@ -16,7 +17,8 @@ typedef struct{
     MODE mode;
 }file;
 
-#include "files.h"
+
+
 
 void files_init(){
     open_files = list_init();
@@ -47,16 +49,32 @@ void files_exit(){
         file * f = list_get(open_files, i);
         free(f->name);
         fclose(f->stream);
+        free(f);
     }
 
     list_free(open_files);
 }
 
+void list_files(){
+    for(int i = 0; i < list_length(open_files); i++){
+        file * f = list_get(open_files, i);
+
+        printf("%3i: %s\n", f->stream->_fileno, f->name);
+    }
+}
 void open(char ** tokens, int token_number){
+
+    if(token_number == 0){
+        list_files();
+        return;
+    }
+
     FILE * f = fopen(tokens[0], "r");
 
+
+
     if(f == NULL){
-        perror("ERROR AL ABRIR EL ARCHIVOS:");
+        perror("ERROR AL ABRIR EL ARCHIVOS");
         return;
     }
 
@@ -65,15 +83,20 @@ void open(char ** tokens, int token_number){
     opened_file->stream = f;
     opened_file->name = strdup(tokens[0]);
 
-    list_append(open_files, opened_file);
+    //list_append(open_files, opened_file);
+    list_add(open_files, opened_file->stream->_fileno,opened_file);
 }
 void open_help(){
     printf("test");
 }
 void close(char ** tokens, int token_number){
+    if(tokens <= 0)
+        return;
+
+    int ds = atoi(tokens[0]);
     for(int i = 0; i < list_length(open_files); i++){
         file * f = list_get(open_files, i);
-        if(!strcmp(tokens[0], f->name)){
+        if(ds == f->stream->_fileno){
             free(f->name);
             fclose(f->stream);
             free(f);
@@ -83,14 +106,5 @@ void close(char ** tokens, int token_number){
     }
 }
 void close_help(){
-    printf("test");
-}
-void list_files(char ** tokens, int token_number){
-    for(int i = 0; i < list_length(open_files); i++){
-        file * f = list_get(open_files, i);
-        printf("%3i: %s\n", i, f->name);
-    }
-}
-void list_files_help(){
     printf("test");
 }
