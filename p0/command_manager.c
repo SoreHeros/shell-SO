@@ -24,27 +24,68 @@ void not_found_help();
 command_entry nf = {"not found\0", NOTFOUND, not_found, not_found_help};
 command_entry commands[] =
         {
-                     {"quit\0",      EXIT,           quit,          quit_help},
-                     {"exit\0",      EXIT,           exit_command,  exit_help},
-                     {"bye\0",       EXIT,           bye,           bye_help},
-                     {"help\0",      NORMAL,         help,          help_help},
-                     {"authors\0",   NORMAL,         authors,       authors_help},
-                     {"echo\0",      NORMAL,         echo,          echo_help},
-                     {"pid\0",       NORMAL,         pid,           pid_help},
-                     {"ppid\0",      NORMAL,         ppid,          ppid_help},
-                     {"infosys\0",   NORMAL,         infosys,       infosys_help},
-                     {"historic\0",  NORMAL,         historic,      historic_help},
-                    {"open\0",      NORMAL,         open,          open_help},
+                     {"quit\0",      EXIT,          quit,          quit_help},
+                     {"exit\0",      EXIT,          exit_command,  exit_help},
+                     {"bye\0",       EXIT,          bye,           bye_help},
+                     {"help\0",      NORMAL,        help,          help_help},
+                     {"authors\0",   NORMAL,        authors,       authors_help},
+                     {"echo\0",      NORMAL,        echo,          echo_help},
+                     {"pid\0",       NORMAL,        pid,           pid_help},
+                     {"ppid\0",      NORMAL,        ppid,          ppid_help},
+                     {"infosys\0",   NORMAL,        infosys,       infosys_help},
+                     {"historic\0",  NORMAL,        historic,      historic_help},
+                    {"open\0",      NORMAL, open_command,  open_help},
                     {"close\0",     NORMAL,         close_command, close_help},
                     {"date\0",      NORMAL,         date,          date_help},
+                    {"cd\0",        NORMAL,         cd,            cd_help},
+                    {"dup\0",       NORMAL,         dup_command,   dup_help},
+
         };
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);
 list historial;
 
-//todo
-void historic(char **, int){
-    for(int i = 0, len = list_length(historial); i < len; i++)
+//todo fix recursions
+#define RECURSION_LIMIT 10
+int recursions = 0;
+
+void historic_execute(int n){
+
+    recursions++;
+    if(recursions > RECURSION_LIMIT){
+        fprintf(stderr, "ERROR AL EJECUTAR UN HISTORICO: DEMASIADAS RECURSIONES\n");
+        return;
+    }
+
+    if(n < 0 || n >= list_length(historial)){
+        fprintf(stderr, "ERROR AL EJECUTAR UN HISTORICO: POSICION NO VALIDA\n");
+        return;
+    }
+
+    char * str = strdup(list_get(historial, n));
+    printf("executing command %i: %s", n, str);
+    char * tokens[TOKEN_BUFFER_SIZE];
+    int token_number = tokenize(tokens, str);
+    command_entry comd = get_command(tokens[0]);
+    comd.command(&tokens[1], token_number - 1);
+    free(str);
+}
+
+void historic(char ** tokens, int token_number){
+
+    int historic_start = 0;
+
+    if(token_number > 0){
+        if(tokens[0][0] == '-')
+            historic_start = list_length(historial) - atoi(&tokens[0][1]);
+        else{
+            historic_execute(atoi(tokens[0]));
+            recursions = 0;
+            return;
+        }
+    }
+
+    for(int i = historic_start, len = list_length(historial); i < len; i++)
         printf("%3i: %s", i,(char *)list_get(historial, i));
 }
 void historic_help(){
@@ -58,7 +99,7 @@ void help(char ** tokens, int token_number){
             commands_pointer[i]->help();
         }
     }else{
-        //todo optimizar?
+        //optimizar?
         for (int i = 0; i < commands_len; i++)
             for(int j = 0; j < token_number; j++)
                 if(strcmp(tokens[j], commands[i].name) == 0) {

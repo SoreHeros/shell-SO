@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "lists.h"
 #include "files.h"
@@ -14,8 +15,7 @@ typedef enum {READ = 0x1, WRITE = 0x2, BINARY = 0x4, }MODE;
 
 typedef struct{
     char * name;
-    FILE * stream;
-    MODE mode;
+    int fd;
 }file;
 
 
@@ -27,29 +27,29 @@ void files_init(){
     file *f1 = malloc(sizeof(file));
 
     f1->name = strdup("stdin");
-    f1->stream = stdin;
+    f1->fd = stdin->_fileno;
 
     list_append(open_files, f1);
 
     file *f2 = malloc(sizeof(file));
 
     f2->name = strdup("stdout");
-    f2->stream = stdout;
+    f2->fd = stdout->_fileno;
 
     list_append(open_files, f2);
 
     file *f3 = malloc(sizeof(file));
 
     f3->name = strdup("stderr");
-    f3->stream = stderr;
+    f3->fd = stderr->_fileno;
 
     list_append(open_files, f3);
 }
 void files_exit(){
     for(int i = 0; i < list_length(open_files); i++){
         file * f = list_get(open_files, i);
+        close(f->fd);
         free(f->name);
-        fclose(f->stream);
         free(f);
     }
 
@@ -60,35 +60,84 @@ void list_files(){
     for(int i = 0; i < list_length(open_files); i++){
         file * f = list_get(open_files, i);
 
-        printf("%3i: %s\n", f->stream->_fileno, f->name);
+        printf("%3i: %30s ", f->fd, f->name);
+
+        int mode = fcntl(f->fd, F_GETFL);
+
+        if(mode & O_RDWR)
+            printf("O_RDWR ");
+        else if(mode & O_WRONLY)
+            printf("O_WRONLY ");
+        else
+            printf("O_RDONLY ");
+
+        if(mode & O_CREAT)
+            printf("O_CREAT ");
+
+        if(mode & O_APPEND)
+            printf("O_APPEND ");
+
+        if(mode & O_EXCL)
+            printf("O_EXCL ");
+
+        if(mode & O_TRUNC)
+            printf("O_TRUNC ");
+
+        printf("\n");
     }
 }
-void open(char ** tokens, int token_number){
+void open_command(char ** tokens, int token_number){
 
     if(token_number == 0){
         list_files();
         return;
     }
 
-    FILE * f = fopen(tokens[0], "r");
+    int mode = 0;
 
+    for(int i = 1; i < token_number; i++){
+        if(!strcmp(tokens[i], "cr"))
+            mode |= O_CREAT;
+        else if(!strcmp(tokens[i], "ap"))
+            mode |= O_APPEND;
+        else if(!strcmp(tokens[i], "ex"))
+            mode |= O_EXCL;
+        else if(!strcmp(tokens[i], "ro"))
+            mode |= O_RDONLY;
+        else if(!strcmp(tokens[i], "rw"))
+            mode |= O_RDWR;
+        else if(!strcmp(tokens[i], "wo"))
+            mode |= O_WRONLY;
+        else if(!strcmp(tokens[i], "tr"))
+            mode |= O_TRUNC;
 
+    }
 
-    if(f == NULL){
-        perror("ERROR AL ABRIR EL ARCHIVOS");
+    int fd = open(tokens[0], mode);
+    if(fd < 0){
+        perror("ERROR AL ABRIR EL ARCHIVO");
         return;
     }
 
     file * opened_file = malloc(sizeof(file));
 
-    opened_file->stream = f;
+    opened_file->fd = fd;
     opened_file->name = strdup(tokens[0]);
 
     //list_append(open_files, opened_file);
-    list_add(open_files, opened_file->stream->_fileno,opened_file);
+    list_add(open_files, opened_file->fd,opened_file);
 }
 void open_help(){
-    printf("OPENHELP\n");
+    printf("\topen [file] [cr|ap|ex|ro|rw|wo|tr] \n");
+    printf("empty:\tprints the open files\n");
+    printf("file:\tthe file that you want to open\n");
+    printf("cr:\tmode crate\n");
+    printf("ap:\tmode append\n");
+    printf("ex:\tmode excl\n");
+    printf("ro:\tmode read only\n");
+    printf("rw:\tmode read write\n");
+    printf("wo:\tmode write only\n");
+    printf("tr:\tmode truncate\n");
 }
 void close_command(char ** tokens, int token_number){
     if(tokens <= 0)
@@ -103,9 +152,9 @@ void close_command(char ** tokens, int token_number){
 
     for(int i = 3; i < list_length(open_files); i++){
         file * f = list_get(open_files, i);
-        if(ds == f->stream->_fileno){
+        if(ds == f->fd){
+            close(ds);
             free(f->name);
-            fclose(f->stream);
             free(f);
             list_remove(open_files, i);
             i--;
@@ -113,7 +162,8 @@ void close_command(char ** tokens, int token_number){
     }
 }
 void close_help(){
-    printf("CLOSEHELP\n");
+    printf("\tclose [descriptior]\n");
+    printf("closes the chosen file\n");
 }
 void cd(char ** tokens, int token_number) {
     if(token_number){
@@ -130,5 +180,34 @@ void cd(char ** tokens, int token_number) {
     }
 }
 void cd_help(){
-    printf("CDHELP\n");
+    printf("\tcd [path]\n");
+    printf("empty:\tprints the current working directory\n");
+    printf("path:\tchanges the working directory to the chosen one\n");
+}
+void dup_command(char ** tokens, int token_number){
+    if(!token_number)
+        return;
+    int oldfd = atoi(tokens[0]);
+    int newfd = dup(oldfd);
+
+    if(newfd < 0){
+        perror("ERROR AL DUPLICAR EL ARCHIVO");
+        return;
+    }
+
+    file  * f = malloc(sizeof(file));
+    f->fd = newfd;
+
+    for(int i = 0; i < list_length(open_files); i++){
+        file * aux = list_get(open_files, i);
+        if(aux->fd == oldfd) {
+            f->name = strdup(aux->name);
+            break;
+        }
+    }
+    list_add(open_files, f->fd, f);
+}
+void dup_help(){
+    printf("\tdup [descriptor]\n");
+    printf("duplicates the chosen file\n");
 }

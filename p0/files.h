@@ -8,16 +8,16 @@
 void files_init();
 void files_exit();
 
-void open(char **, int);
+void open_command(char **, int);
 void open_help();
 void close_command(char **, int);
 void close_help();
-
-//todo
 void cd(char **, int);
 void cd_help();
 void dup_command(char **, int);
 void dup_help();
+
+//todo
 void create(char **, int);
 void create_help();
 void read_command(char **, int);

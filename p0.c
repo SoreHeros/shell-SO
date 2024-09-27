@@ -1,9 +1,8 @@
+//Heros Vicente González heros.vicente@udc.es
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
-
-void sig_handler(int);
 
 #include "p0/command_manager.h"
 
@@ -23,6 +22,14 @@ int read_input(char * string){
         return 0;
     }
     return 1;
+}
+
+void sig_handler(int sig){
+    switch (sig) {
+        case SIGINT:
+            command_manager_exit();
+            exit(0);
+    }
 }
 
 int main(){
@@ -70,12 +77,4 @@ int main(){
     //fin
     command_manager_exit();
     return 0;
-}
-
-void sig_handler(int sig){
-    switch (sig) {
-        case SIGINT:
-            command_manager_exit();
-            exit(0);
-    }
 }
