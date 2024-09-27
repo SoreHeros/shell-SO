@@ -4,10 +4,11 @@
 
 #include "sys_proc_info.h"
 #include <stdio.h>
-#include <sys/types.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
+
 #include "lists.h"
 
 void pid(char **, int){
@@ -119,4 +120,37 @@ void infosys_help(){
     printf("-p:\tprints the processor type\n");
     printf("-i:\tprints the hardware platform\n");
     printf("-o:\tprints the operative system\n");
+}
+
+void date(char ** tokens, int token_number){
+    time_t systime = time(NULL);
+    struct tm * time = localtime(&systime);
+
+    struct{
+        char t;
+        char d;
+    }flags = {0};
+
+    for(int i = 0; i < token_number; i++){
+        if(!strcmp(tokens[i], "-t"))
+            flags.t = 1;
+        else if(!strcmp(tokens[1], "-d"))
+            flags.d = 1;
+    }
+
+    if(!flags.d && !flags.t){
+        flags.t = 1;
+        flags.d = 1;
+    }
+
+    if(flags.t)
+        printf("%02i:%02i:%02i\n", time->tm_hour, time->tm_min, time->tm_sec);
+    if(flags.d)
+        printf("%02i/%02i/%04i\n", time->tm_mday, time->tm_mon + 1, time->tm_year + 1900);
+}
+void date_help(){
+    printf("\tdate [-t|-d]\n");
+    printf("empty:\tsame as -t -d\n");
+    printf("-t:\tprints the hour\n");
+    printf("-d:\tprints the date\n");
 }

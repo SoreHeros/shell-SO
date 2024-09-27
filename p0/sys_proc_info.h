@@ -9,8 +9,6 @@ void pid(char **, int);
 void pid_help();
 void ppid(char **, int);
 void ppid_help();
-
-//todo
 void infosys(char **, int);
 void infosys_help();
 void date(char **, int);

@@ -73,7 +73,6 @@ int main(){
 }
 
 void sig_handler(int sig){
-    printf("\n");
     switch (sig) {
         case SIGINT:
             command_manager_exit();
