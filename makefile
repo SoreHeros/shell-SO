@@ -15,7 +15,7 @@ run: $(result)
 	./$(result)
 
 leak: $(result)
-	valgrind --leak-check=full --show-leak-kinds=all ./$(result)AAAAAA
+	valgrind --leak-check=full --show-leak-kinds=all ./$(result)
 
 clean:
 	rm $(result) $(objects)

@@ -74,10 +74,7 @@ void sig_handler(int sig){
     printf("\n");
     switch (sig) {
         case SIGINT:
-            signal_out = 1;
-
-            break;
-        default:
-            abort();
+            command_manager_exit();
+            exit(0);
     }
 }
