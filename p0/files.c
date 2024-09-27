@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "lists.h"
 #include "files.h"
@@ -87,9 +88,9 @@ void open(char ** tokens, int token_number){
     list_add(open_files, opened_file->stream->_fileno,opened_file);
 }
 void open_help(){
-    printf("test");
+    printf("OPENHELP\n");
 }
-void close(char ** tokens, int token_number){
+void close_command(char ** tokens, int token_number){
     if(tokens <= 0)
         return;
 
@@ -112,5 +113,22 @@ void close(char ** tokens, int token_number){
     }
 }
 void close_help(){
-    printf("test");
+    printf("CLOSEHELP\n");
+}
+void cd(char ** tokens, int token_number) {
+    if(token_number){
+        if(chdir(tokens[0]))
+            perror("ERROR AL CAMBIAR EL DIRECTIORIO DE TRABAJO");
+    }else{
+        char * pathname;
+        if((pathname =getcwd(NULL, 0)) == NULL){
+            perror("ERROR AL OBTENER EL DIRECTORIO DE TRABAJO");
+            return;
+        }
+        printf("%s\n", pathname);
+        free(pathname);
+    }
+}
+void cd_help(){
+    printf("CDHELP\n");
 }
