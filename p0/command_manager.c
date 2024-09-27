@@ -21,25 +21,25 @@ void historic_help();
 void not_found(char **, int);
 void not_found_help();
 
-static command_entry nf = {"not found\0", NOTFOUND, not_found, not_found_help};
-static command_entry commands[] =
+command_entry nf = {"not found\0", NOTFOUND, not_found, not_found_help};
+command_entry commands[] =
         {
-                     {"quit\0",      EXIT,   quit,           quit_help},
-                     {"exit\0",      EXIT,   exit_command, exit_help},
-                     {"bye\0",       EXIT,   bye,          bye_help},
-                     {"help\0",      NORMAL, help,         help_help},
-                     {"authors\0",   NORMAL, authors,      authors_help},
-                     {"echo\0",      NORMAL, echo,         echo_help},
-                     {"pid\0",       NORMAL, pid,          pid_help},
-                     {"ppid\0",      NORMAL, ppid,         ppid_help},
-                     {"infosys\0",   NORMAL, infosys,      infosys_help},
-                     {"historic\0",  NORMAL, historic,     historic_help},
+                     {"quit\0",      EXIT,   quit,          quit_help},
+                     {"exit\0",      EXIT,   exit_command,  exit_help},
+                     {"bye\0",       EXIT,   bye,           bye_help},
+                     {"help\0",      NORMAL, help,          help_help},
+                     {"authors\0",   NORMAL, authors,       authors_help},
+                     {"echo\0",      NORMAL, echo,          echo_help},
+                     {"pid\0",       NORMAL, pid,           pid_help},
+                     {"ppid\0",      NORMAL, ppid,          ppid_help},
+                     {"infosys\0",   NORMAL, infosys,       infosys_help},
+                     {"historic\0",  NORMAL, historic,      historic_help},
                     {"open\0",      NORMAL,  open,         open_help},
                     {"close\0",     NORMAL,  close,        close_help},
         };
-static command_entry ** commands_pointer;
-static int commands_len = sizeof(commands) / sizeof(command_entry);
-static list historial;
+command_entry ** commands_pointer;
+int commands_len = sizeof(commands) / sizeof(command_entry);
+list historial;
 
 //todo
 void historic(char **, int){
@@ -110,6 +110,9 @@ command_entry get_command(char * command_name){
 }
 void history_append(char * entry){
     list_append(historial, strdup(entry));
+}
+void history_pop(){
+    free(list_pop(historial));
 }
 int tokenize(char ** tokens, char * string){
     int i = 1;

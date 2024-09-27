@@ -13,6 +13,7 @@ void list_free(list l);
 
 //list management
 void list_append(list l , void * element);
+void * list_pop(list l);
 void list_remove(list l, int pos);
 void list_add(list l, int pos, void * element);
 

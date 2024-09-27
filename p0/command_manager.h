@@ -19,6 +19,7 @@ void command_manager_init();
 void command_manager_exit();
 command_entry get_command(char * command_name);
 void history_append(char * entry);
+void history_pop();
 int tokenize(char ** tokens, char * input);
 
 

@@ -94,7 +94,13 @@ void close(char ** tokens, int token_number){
         return;
 
     int ds = atoi(tokens[0]);
-    for(int i = 0; i < list_length(open_files); i++){
+
+    if(ds < 3){
+        fprintf(stderr,"ERROR AL CERRAR ARCHIVO: ES UNA MALA IDEA\n");
+        return;
+    }
+
+    for(int i = 3; i < list_length(open_files); i++){
         file * f = list_get(open_files, i);
         if(ds == f->stream->_fileno){
             free(f->name);

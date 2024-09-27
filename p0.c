@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 void sig_handler(int);
-int signal_out = 0;
 
 #include "p0/command_manager.h"
 
@@ -36,7 +35,7 @@ int main(){
     int token_number;
 
     //sección repetida
-    while(interpreter_code != EXIT && !signal_out){
+    while(interpreter_code != EXIT){
         print_prompt();
 
         if(!read_input(input_buffer)){
@@ -44,13 +43,16 @@ int main(){
             continue;
         }
 
+
         history_append(input_buffer);
 
         if((token_number = tokenize(tokens, input_buffer)) == -1){
             fprintf(stderr, "ERROR EN LA CONVERSION A TOKENS: DEMASIADOS TOKENS\n");
             continue;
-        }else if(!token_number)
+        }else if(!token_number) {
+            history_pop();
             continue;
+        }
 
         command_entry comm = get_command(tokens[0]);
 

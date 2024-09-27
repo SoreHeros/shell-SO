@@ -7,7 +7,7 @@ $(result): $(main) $(objects)
 
 #compilar todos los objetos
 %.o: %.c %.h
-	gcc -Wall -c $< -o $@
+	gcc -Wall -c -o $@ $<
 
 .PHONY: clean run leak
 

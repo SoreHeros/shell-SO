@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-//todo hacerlas por array reservado de forma dinámica
-
 //internal functions
 struct list{
     void ** data;
@@ -53,6 +51,10 @@ void list_append(list l , void * element){
         }
     }
     l->data[l->list_len++] = element;
+}
+void * list_pop(list l){
+    l->list_len--;
+    return l->data[l->list_len];
 }
 void list_remove(list l, int pos){
     for(int i = pos + 1; i < l->list_len; i++)
