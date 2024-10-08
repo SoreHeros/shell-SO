@@ -201,7 +201,13 @@ void dup_command(char ** tokens, int token_number){
     for(int i = 0; i < list_length(open_files); i++){
         file * aux = list_get(open_files, i);
         if(aux->fd == oldfd) {
-            f->name = strdup(aux->name);
+            //copiar el string antiguo con el (dup)
+            char dup[] = "(dup)";
+            f->name = malloc(sizeof(dup) + strlen(aux->name));
+            f->name[0] = '\0';
+            strcat(f->name, dup);
+            strcat(f->name, aux->name);
+            printf("duplicated file %s on file descriptor %i\n", aux->name, f->fd);
             break;
         }
     }

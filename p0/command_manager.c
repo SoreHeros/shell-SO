@@ -34,7 +34,7 @@ command_entry commands[] =
                      {"ppid\0",      NORMAL,        ppid,          ppid_help},
                      {"infosys\0",   NORMAL,        infosys,       infosys_help},
                      {"historic\0",  NORMAL,        historic,      historic_help},
-                    {"open\0",      NORMAL, open_command,  open_help},
+                    {"open\0",      NORMAL,         open_command,  open_help},
                     {"close\0",     NORMAL,         close_command, close_help},
                     {"date\0",      NORMAL,         date,          date_help},
                     {"cd\0",        NORMAL,         cd,            cd_help},
@@ -99,13 +99,17 @@ void help(char ** tokens, int token_number){
             commands_pointer[i]->help();
         }
     }else{
-        //optimizar?
-        for (int i = 0; i < commands_len; i++)
-            for(int j = 0; j < token_number; j++)
-                if(strcmp(tokens[j], commands[i].name) == 0) {
-                    printf("\n");
-                    commands_pointer[i]->help();
-                }
+        int found = 0;
+        for (int i = 0; i < token_number; i++) {
+            command_entry cmd = get_command(tokens[i]);
+            if (cmd.code != NOTFOUND) {
+                cmd.help();
+                printf("\n");
+                found = 1;
+            }
+        }
+        if(!found)
+            printf("no commands found\n");
     }
 }
 void help_help(){
