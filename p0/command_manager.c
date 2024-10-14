@@ -44,6 +44,7 @@ command_entry commands[] =
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);
 list historial;
+list color_prompt;
 
 //todo fix recursions
 #define RECURSION_LIMIT 10
@@ -71,6 +72,35 @@ void historic_execute(int n){
     free(str);
 }
 
+void print_prompt(char * prompt){
+    char code[8] = "\033[33m";
+    for(int i = list_length(color_prompt); i < strlen(prompt); i++){ //rellenar hasta que llegue al tamaño de la prompt
+        if(rand()&0b1)//brillante o no brillante
+            code[2] = '3';
+        else
+            code[2] = '9';
+
+        code[3] = '1' + rand() % 7; //todos los colores excepto el negro
+        list_append(color_prompt, *(void **)code); //como code siempre va a ser menor que un puntero, se puede guardar directamente
+    }
+    list_pop(color_prompt); //eliminar el último
+    if(rand()&0b1)//brillante o no brillante
+        code[2] = '3';
+    else
+        code[2] = '9';
+
+    code[3] = '1' + rand() % 7; //todos los colores excepto el negro
+    list_add(color_prompt, 0, *(void **)code);//añadir otro al principio
+
+    //imprimir
+    for(int i = 0; prompt[i] != '\0'; i++){
+        void * aux = list_get(color_prompt, i);
+        printf("%s%c", (char *)&aux, prompt[i]);//parseo raro para que lea el dato como si fuera un string
+    }
+
+    printf("\033[0m");
+}
+
 void historic(char ** tokens, int token_number){
 
     int historic_start = 0;
@@ -86,7 +116,7 @@ void historic(char ** tokens, int token_number){
     }
 
     for(int i = historic_start, len = list_length(historial); i < len; i++)
-        printf("%3i: %s", i,(char *)list_get(historial, i));
+        printf("%3i: %s\n", i,(char *)list_get(historial, i));
 }
 void historic_help(){
     printf("\thistoric [N | -N]\nempty:\tprints every command you made\nN:\trepeats command N from the historic\n-N:\tprints the last N commands\n");
@@ -135,6 +165,7 @@ int bsearch_comparator(const void * key, const void * data){
 
 void command_manager_init(){
     historial = list_init();
+    color_prompt = list_init();
     commands_pointer = malloc(commands_len * sizeof(command_entry *));
     for(int i = 0; i < commands_len; i++)
         commands_pointer[i] = &commands[i];
@@ -145,6 +176,7 @@ void command_manager_exit(){
     for(int i = 0; i < list_length(historial); i++)
         free(list_get(historial, i));
     list_free(historial);
+    list_free(color_prompt);//como es asignación directa no hace falta liberar elemento a elemento
     free(commands_pointer);
     files_exit();
 }
@@ -160,6 +192,13 @@ void history_append(char * entry){
 void history_pop(){
     free(list_pop(historial));
 }
+int history_len(){
+    return list_length(historial);
+}
+char * history_get(int pos){
+    return list_get(historial, pos);
+}
+
 int tokenize(char ** tokens, char * string){
     int i = 1;
 

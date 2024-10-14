@@ -20,7 +20,10 @@ void command_manager_exit();
 command_entry get_command(char * command_name);
 void history_append(char * entry);
 void history_pop();
+int history_len();
+char * history_get(int pos);
 int tokenize(char ** tokens, char * input);
+void print_prompt(char * prompt);
 
 
 #endif //SHELL_SO_COMMAND_MANAGER_H
