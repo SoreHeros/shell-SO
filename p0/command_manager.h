@@ -7,6 +7,8 @@
 
 typedef enum {EXIT, NORMAL, NOTFOUND}command_directive;
 #define TOKEN_BUFFER_SIZE 128
+#define INPUT_BUFFER_SIZE 1024
+#define PROMPT "terminal:"
 
 typedef const struct{
     char name[12];
@@ -24,6 +26,7 @@ int history_len();
 char * history_get(int pos);
 int tokenize(char ** tokens, char * input);
 void print_prompt(char * prompt);
+int read_input(char * string);
 
 
 #endif //SHELL_SO_COMMAND_MANAGER_H

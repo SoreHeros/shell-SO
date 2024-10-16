@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <termios.h>
+#include <sys/ioctl.h>
 
 #include "command_manager.h"
 #include "lists.h"
@@ -212,4 +214,184 @@ int tokenize(char ** tokens, char * string){
 
 
     return i;
+}
+
+#define ARRIBA 0x1B5B41
+#define ABAJO 0x1B5B42
+#define DERECHA 0x1B5B43
+#define IZQUIERDA 0x1B5B44
+#define SUPR 0x1B5B33
+#define BACKSPACE 127
+
+void set_cursor_pos(int x, int y){
+    printf("\33[%i;%iH", y, x + 1);
+}
+void clean_from_cursor(){
+    printf("\33[0J");
+}
+void buffer_insert(char * string, int pos, char insert){
+    int len = strlen(string) + 1;
+    if(len >= INPUT_BUFFER_SIZE)
+        len = INPUT_BUFFER_SIZE;
+    for(int i = len; i > pos; i--)
+        string[i] = string[i-1];
+    string[pos] = insert;
+    string[INPUT_BUFFER_SIZE - 1] = '\0';
+}
+void buffer_delete(char * string, int pos){
+    int len = strlen(string);
+    for(int i = pos + 1; i <= len; i++)
+        string[i-1] = string[i];
+}
+void buffer_append(char * string, char insert){
+    string[strlen(string) + 1] = '\0';
+    string[strlen(string)] = insert;
+}
+
+//leer manualmente el valor de vuelta
+int manual_read(int * x, int * y){
+    char number[16] = {'\0'};
+    char in;
+    while(getchar() != '\33');//limpiar hasta el \33
+    if(getchar() != '[')//leer el [
+        return 0;
+    while((in = getchar()) != ';')//leer hasta ; e ir guardando los números
+        if(in <= 57 && in >= 48)
+            buffer_append(number, in);
+        else
+            return 0;
+    *y = atoi(number);
+    number[0] = '\0';
+    while((in = getchar()) != 'R')//leer hasta R e ir guardando los números
+        if(in <= 57&& in >= 48)
+            buffer_append(number, in);
+        else
+            return 0;
+    *x = atoi(number);
+    return 1;
+}
+
+void get_cursor_pos(int * x, int * y){//esta función hace que algunas veces se coma una letra, pero creo que es un sacrificio aceptable
+    do{
+        printf("\33[6n");
+    }while(manual_read(x, y) == 0);
+    (*x)--;
+}
+
+//lee la entrada y la procesa en tokens, devuelve 1, si la entrada es demasiado grande devuelve 0
+int read_input(char * string){
+
+    int string_pos, focused_command, ox, oy;
+    struct termios old_tio, new_tio;
+
+    /* get the terminal settings for stdin */
+    tcgetattr(0,&old_tio);
+
+    /* we want to keep the old setting to restore them a the end */
+    new_tio=old_tio;
+
+    /* disable canonical mode (buffered i/o) and local echo */
+    new_tio.c_lflag &= ~ICANON & ~ECHO;
+
+    /* set the new settings immediately */
+    tcsetattr(0,TCSANOW,&new_tio);
+
+    //inicializar
+    string_pos = 0;
+    string[0] = '\0';
+    focused_command = history_len();
+    get_cursor_pos(&ox, &oy);
+    struct winsize ws;
+    int c;
+    do{
+        //set cursor to cursor position
+        ioctl(0, TIOCGWINSZ, &ws);//get window size
+        set_cursor_pos((ox + string_pos) % ws.ws_col, oy + (ox + string_pos) / ws.ws_col);
+        clean_from_cursor();
+        printf("%s", &string[string_pos]);//asegurarse de que ocurra el wrap
+        if(oy + (ox + strlen(string) - 1) / ws.ws_col >= ws.ws_row)//detectar si ha habido wrapping
+            oy = ws.ws_row - (ox + strlen(string) - 1) / ws.ws_col;
+        set_cursor_pos((ox + string_pos) % ws.ws_col, oy + (ox + string_pos) / ws.ws_col);//poner el cursor en el lugar correcto para el usuario
+        c = getchar();
+        if(c == '\33'){
+            c <<= 8;
+            c |= getchar();
+            c <<= 8;
+            c |= getchar();
+            switch (c){
+            case DERECHA:
+                if(string_pos == strlen(string))
+                    putchar('\7');//si no se puede ir a la derecha sonar campana
+                else
+                    string_pos++;
+                break;
+            case IZQUIERDA:
+                if(string_pos == 0)
+                    putchar('\7');//si no se puede ir a la izquierda sonar campana
+                else
+                    string_pos--;
+                break;
+            case SUPR:
+                getchar();//recoger el caracter extra
+                if(string_pos == strlen(string))
+                    putchar('\7');//si no se puede borrar sonar campana
+                else
+                    buffer_delete(string, string_pos);
+                break;
+            case ARRIBA:
+                if(focused_command == 0)
+                    putchar('\7');//si no se puede ir más arriba sonar campana
+                else{
+                    if(focused_command == history_len())
+                        history_append(string);//guardarlo solo si no se ha guardado ya
+                    focused_command--;
+                    strcpy(string, history_get(focused_command));//get history
+                    set_cursor_pos(ox, oy);//poner cursor al principio
+                    printf("%s", string);//imprimir string
+                    string_pos = strlen(string);//marcar como leído
+                }
+                break;
+            case ABAJO:
+                if(focused_command == history_len())
+                    putchar('\7');//si no se puede ir más abajo sonar campana
+                else{
+                    focused_command++;
+                    strcpy(string, history_get(focused_command));//get history
+                    if(focused_command == history_len() - 1)
+                        history_pop(string);//sacarlo de la lista de histórico para evitar duplicados
+                    set_cursor_pos(ox, oy);//poner cursor al principio
+                    printf("%s", string);//imprimir string
+                    string_pos = strlen(string);//marcar como leído
+                }
+                break;
+            }
+        }else{
+            if(c == BACKSPACE){
+                if(string_pos == 0)
+                    putchar('\7');//si no se puede borrar sonar campana
+                else{
+                    string_pos--;
+                    buffer_delete(string, string_pos);
+                }
+            }else if(c != '\n'){
+                putchar(c);
+                buffer_insert(string, string_pos, c);
+                string_pos++;
+                if(string_pos > INPUT_BUFFER_SIZE - 1){
+                    putchar('\7');
+                    string_pos = INPUT_BUFFER_SIZE - 1;
+                }
+            }
+        }
+    }while(c != '\n');
+
+    /* restore the former settings */
+    tcsetattr(0,TCSANOW,&old_tio);
+
+
+    if(focused_command < history_len())//eliminar el string de historic si es necesario
+        history_pop();
+
+    putchar('\n');
+    return 1;//como ya se maneja el tamaño máximo siempre va a retornar 1
 }
