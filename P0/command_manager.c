@@ -66,7 +66,7 @@ void historic_execute(int n){
     }
 
     char * str = strdup(list_get(historial, n));
-    printf("executing command %i: %s", n, str);
+    printf("executing command %i: %s\n", n, str);
     char * tokens[TOKEN_BUFFER_SIZE];
     int token_number = tokenize(tokens, str);
     command_entry comd = get_command(tokens[0]);
@@ -301,6 +301,7 @@ int read_input(char * string){
     string[0] = '\0';
     focused_command = history_len();
     get_cursor_pos(&ox, &oy);
+    ox = strlen(PROMPT);
     struct winsize ws;
     int c;
     do{

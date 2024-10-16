@@ -5,8 +5,11 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <time.h>
+#include <termio.h>
 
-#include "p0/command_manager.h"
+#include "P0/command_manager.h"
+
+struct termios old_tio;
 
 void sig_handler(int sig){
     switch (sig) {
@@ -15,13 +18,16 @@ void sig_handler(int sig){
             //salida por señal al sistema
             printf("\n");
             command_manager_exit();
-            exit(0);//todo cambiar de una salida directa a una variable
+            tcsetattr(0,TCSANOW,&old_tio);
+            exit(0);//todo cambiar de una salida directa a una variable???
 
     }
 }
 
 int main(){
     //init
+    /* get the terminal settings for stdin */
+    tcgetattr(0,&old_tio);//ajustes para devolver al parar la señal
     srand(time(NULL));
     signal(SIGINT,sig_handler);
     signal(SIGTSTP, sig_handler);
@@ -40,7 +46,7 @@ int main(){
             continue;
         }
 
-        if(strlen(input_buffer) <= 1)//ya saltarselo si está vacío
+        if(strlen(input_buffer) == 0)//ya saltarselo si está vacío
             continue;
 
 
