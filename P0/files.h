@@ -18,8 +18,6 @@ void dup_command(char **, int);
 void dup_help();
 
 //todo
-void create(char **, int);
-void create_help();
 void read_command(char **, int);
 void read_help();
 void write_command(char **, int);
