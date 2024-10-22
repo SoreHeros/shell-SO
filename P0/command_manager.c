@@ -50,9 +50,9 @@ list color_prompt;
 
 //todo fix recursions
 #define RECURSION_LIMIT 10
-int recursions = 0;
 
 void historic_execute(int n){
+    static int recursions = 0;
 
     recursions++;
     if(recursions > RECURSION_LIMIT){
@@ -72,6 +72,7 @@ void historic_execute(int n){
     command_entry comd = get_command(tokens[0]);
     comd.command(&tokens[1], token_number - 1);
     free(str);
+    recursions = 0;
 }
 
 void print_prompt(char * prompt){
@@ -112,7 +113,6 @@ void historic(char ** tokens, int token_number){
             historic_start = list_length(historial) - atoi(&tokens[0][1]);
         else{
             historic_execute(atoi(tokens[0]));
-            recursions = 0;
             return;
         }
     }
@@ -359,7 +359,7 @@ int read_input(char * string){
                     focused_command++;
                     strcpy(string, history_get(focused_command));//get history
                     if(focused_command == history_len() - 1)
-                        history_pop(string);//sacarlo de la lista de histórico para evitar duplicados
+                        history_pop();//sacarlo de la lista de histórico para evitar duplicados
                     set_cursor_pos(ox, oy);//poner cursor al principio
                     printf("%s", string);//imprimir string
                     string_pos = strlen(string);//marcar como leído
