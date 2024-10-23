@@ -2,7 +2,7 @@
 // Created by heros on 17/10/24.
 //
 
-#include "files.h"
+#include "dirs.h"
 #include <stdio.h>
 
 void makefile(char **, int){

@@ -13,6 +13,7 @@ struct termios old_tio;
 
 void sig_handler(int sig){
     switch (sig) {
+        case SIGQUIT:
         case SIGTSTP:
         case SIGINT:
             //salida por señal al sistema
@@ -30,6 +31,7 @@ int main(){
     tcgetattr(0,&old_tio);//ajustes para devolver al parar la señal
     srand(time(NULL));
     signal(SIGINT,sig_handler);
+    signal(SIGQUIT, sig_handler);
     signal(SIGTSTP, sig_handler);
     command_manager_init();
     int interpreter_code = NORMAL;

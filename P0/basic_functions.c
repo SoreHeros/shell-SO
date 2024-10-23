@@ -60,3 +60,15 @@ void authors(char ** tokens, int token_number){
 void authors_help(){
     printf("\tauthors [-l|-n]\nempty:\tprints author's name and login\n-n:\tprints author's name\n-l\tprints author's login\n");
 }
+
+
+void signals(char **, int){
+    printf("ctrl + C:\tSIGINT\tIterrupts the running command\n");
+    printf("ctrl + \\:\tSIGQUIT\tQuits the shell\n");
+    printf("ctrl + Z:\tSIGTSTP\tSuspends the shell\n");
+    printf("ctrl + S:\tSIGSTOP\tStops the shell\n");
+    printf("ctrl + Q:\tSIGCONT\tContinues running the shell\n");
+}
+void signals_help(){
+    printf("\tsignals\nprints all the signals and how to call them\n");
+}

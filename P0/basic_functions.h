@@ -15,5 +15,7 @@ void bye(char **, int);
 void bye_help();
 void authors(char **, int);
 void authors_help();
+void signals(char **, int);
+void signals_help();
 
 #endif //SHELL_SO_BASIC_FUNCTIONS_H

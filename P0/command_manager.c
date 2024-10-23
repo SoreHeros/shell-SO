@@ -41,6 +41,7 @@ command_entry commands[] =
                     {"date\0",      NORMAL,         date,          date_help},
                     {"cd\0",        NORMAL,         cd,            cd_help},
                     {"dup\0",       NORMAL,         dup_command,   dup_help},
+                    {"signals\0",       NORMAL,         signals,   signals_help},
 
         };
 command_entry ** commands_pointer;
