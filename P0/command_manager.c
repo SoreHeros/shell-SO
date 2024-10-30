@@ -14,6 +14,7 @@
 #include "sys_proc_info.h"
 #include "files.h"
 #include "../P1/dirs.h"
+#include "../P2/mallocs.h"
 
 void help(char **, int);
 void help_help();
@@ -181,6 +182,7 @@ void command_manager_init(){
         commands_pointer[i] = &commands[i];
     qsort(commands_pointer, commands_len, sizeof(command_entry *), command_comparator);
     files_init();
+    mallocs_init();
 }
 void command_manager_exit(){
     for(int i = 0; i < list_length(historial); i++)
@@ -189,6 +191,7 @@ void command_manager_exit(){
     list_free(color_prompt);//como es asignación directa no hace falta liberar elemento a elemento
     free(commands_pointer);
     files_exit();
+    mallocs_exit();
 }
 command_entry get_command(char * command_name){
     command_entry ** comm = (command_entry **) bsearch(&command_name, commands_pointer,commands_len, sizeof(command_entry *), bsearch_comparator);

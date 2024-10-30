@@ -4,7 +4,10 @@
 
 #ifndef MALLOCS_H
 #define MALLOCS_H
+void mallocs_init();
+void mallocs_exit();
 
+//todo
 void allocate(char **, int);
 void allocate_help();
 void deallocate(char **, int);
