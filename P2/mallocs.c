@@ -8,6 +8,7 @@
 
 #include <time.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef enum{
     MALLOC, SHARED, MAPPED
@@ -32,4 +33,16 @@ void mallocs_exit(){
         free(a);
     }
     list_free(malloc_list);
+}
+
+void allocate(char ** tokens, int token_number){
+
+}
+void allocate_help(){
+    printf("\tallocate [-malloc|-createshared|-shared] name [...]\n");
+    printf("name:\tthe name of the file to analyze\n");
+    printf("empty:\tname and size\n");
+    printf("-long:\tadds creation date, inode, symbolic link number, creator and group name and permissions\n");
+    printf("-acc:\tadds access date\n");
+    printf("-link:\tadds the symbolic path\n");
 }

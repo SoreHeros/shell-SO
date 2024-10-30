@@ -250,7 +250,7 @@ void reclistLocal(char lng, char acc, char lnk, char hid, char * dir){//todo fix
     struct dirent *dirent;
 
     //list directory
-    d = opendir(dir);
+    d = opendir(dir);//todo test errores
     if (d) {
         printf("%s\n", dir);
         while ((dirent = readdir(d)) != NULL) {
