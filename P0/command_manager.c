@@ -13,6 +13,7 @@
 #include "basic_functions.h"
 #include "sys_proc_info.h"
 #include "files.h"
+#include "../P1/dirs.h"
 
 void help(char **, int);
 void help_help();
@@ -42,6 +43,12 @@ command_entry commands[] =
                     {"cd\0",        NORMAL,         cd,            cd_help},
                     {"dup\0",       NORMAL,         dup_command,   dup_help},
                     {"signals\0",       NORMAL,         signals,   signals_help},
+                    {"makefile\0",       NORMAL,         makefile,   makefile_help},
+                    {"makedir\0",       NORMAL,         makedir,   makedir_help},
+                    {"cwd\0",       NORMAL,         cwd,   cwd_help},
+                    {"listfile\0",       NORMAL,         listfile,   listfile_help},
+                    {"listdir\0",       NORMAL,         listdir,   listdir_help},
+                    {"reclist\0",       NORMAL,         reclist,   reclist_help},
 
         };
 command_entry ** commands_pointer;

@@ -5,18 +5,18 @@
 #ifndef FILES_H
 #define FILES_H
 
-
-//todo
 void makefile(char **, int);
 void makefile_help();
 void makedir(char **, int);
 void makedir_help();
-void listfile(char **, int);
-void listfile_help();
 void cwd(char **, int);
 void cwd_help();
+void listfile(char **, int);
+void listfile_help();
 void listdir(char **, int);
 void listdir_help();
+
+//todo
 void reclist(char **, int);
 void reclist_help();
 void revlist(char **, int);

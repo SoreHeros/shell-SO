@@ -1,6 +1,6 @@
-result = p1
-main = p1.c
-objects = $(patsubst %.c, %.o, $(wildcard P0/*.c) $(wildcard P1/*.c))
+result = p2
+main = p2.c
+objects = $(patsubst %.c, %.o, $(wildcard P0/*.c) $(wildcard P1/*.c) $(wildcard P2/*.c))
 
 $(result): $(main) $(objects)
 	gcc -Wall -o $(result) $(main) $(objects)
@@ -8,6 +8,9 @@ $(result): $(main) $(objects)
 #compilar todos los objetos
 %.o: %.c %.h
 	gcc -Wall -c -o $@ $<
+
+comp:
+	zip -r9 ../$(result).zip . -x ".*" "*.o" "*.out" "*.md" "*.pdf" "*.txt" "testing*" "cmake*"
 
 .PHONY: clean run leak
 
