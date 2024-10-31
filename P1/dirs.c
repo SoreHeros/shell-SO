@@ -55,74 +55,75 @@ void makedir_help(){
 
 void listfilelocal(char lng, char acc, char lnk, char * file){
     struct stat sb;
-        if(lstat(file,&sb)){
-            fprintf(stderr, "ERROR AL LEER EL ESTADO DE %s", file);
-            perror(": ");
-            return;;
+
+    if(lstat(file,&sb)){
+        fprintf(stderr, "ERROR AL LEER EL ESTADO DE %s", file);
+        perror(": ");
+        return;;
+    }
+
+    if(acc || lng){
+        struct tm * time;
+
+        if(acc)
+            time = localtime(&sb.st_mtime); //-acc
+        else
+            time = localtime(&sb.st_atime); //-long
+
+        printf("%04i/%02i/%02i-%02i:%02i\t", time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min);
+
+        if(lng){
+            printf(" %2ju", sb.st_nlink); //-long
+
+            printf(" (%8ju)\t", sb.st_ino); //-long
+
+            printf(" %10s\t %10s\t", getpwuid(sb.st_uid)->pw_name, getgrgid(sb.st_gid)->gr_name); //-long
+
+            char permisos[] = " --------- ";
+
+            //permisos[0]=LetraTF(m);//implementado como color
+            if (sb.st_mode&S_IRUSR) permisos[1]='r';    /*propietario*/
+            if (sb.st_mode&S_IWUSR) permisos[2]='w';
+            if (sb.st_mode&S_IXUSR) permisos[3]='x';
+            if (sb.st_mode&S_IRGRP) permisos[4]='r';    /*grupo*/
+            if (sb.st_mode&S_IWGRP) permisos[5]='w';
+            if (sb.st_mode&S_IXGRP) permisos[6]='x';
+            if (sb.st_mode&S_IROTH) permisos[7]='r';    /*resto*/
+            if (sb.st_mode&S_IWOTH) permisos[8]='w';
+            if (sb.st_mode&S_IXOTH) permisos[9]='x';
+            if (sb.st_mode&S_ISUID) permisos[3]='s';    /*setuid, setgid y stickybit*/
+            if (sb.st_mode&S_ISGID) permisos[6]='s';
+            if (sb.st_mode&S_ISVTX) permisos[9]='t';
+
+            printf("%s\t", permisos); //-long, reformateado
         }
+    }
 
-        if(acc || lng){
-            struct tm * time;
+    printf(" %10jd", sb.st_size); //normal
 
-            if(acc)
-                time = localtime(&sb.st_mtime); //-acc
-            else
-                time = localtime(&sb.st_atime); //-long
+    int isLink= 0;
 
-            printf("%04i/%02i/%02i-%02i:%02i\t", time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min);
+    switch (sb.st_mode & S_IFMT) {
+    case S_IFBLK:  printf("\33[35m");               break;//r-b
+    case S_IFCHR:  printf("\33[33m");               break;//rg-
+    case S_IFDIR:  printf("\33[34m");               break;//--b
+    case S_IFIFO:  printf("\33[36m");               break;//-gb
+    case S_IFLNK:  printf("\33[32m");  isLink = 1;  break;//-g- si esto imprimir link
+    case S_IFREG:  printf("\33[0m" );               break;//rgb
+    case S_IFSOCK: printf("\33[37m");               break;//-gb
+    default:       printf("\33[31m");               break;//r--
+    }
 
-            if(lng){
-                printf(" %2ju", sb.st_nlink); //-long
+    printf(" %s\33[0m", file);
 
-                printf(" (%8ju)\t", sb.st_ino); //-long
+    if(isLink && lnk){
+        printf("\t -> ");
+        char path[PATH_MAX];
+        realpath(file, path);
+        printf("%s", path);
+    }
 
-                printf(" %10s\t %10s\t", getpwuid(sb.st_uid)->pw_name, getgrgid(sb.st_gid)->gr_name); //-long
-
-                char permisos[] = " --------- ";
-
-                //permisos[0]=LetraTF(m);//implementado como color
-                if (sb.st_mode&S_IRUSR) permisos[1]='r';    /*propietario*/
-                if (sb.st_mode&S_IWUSR) permisos[2]='w';
-                if (sb.st_mode&S_IXUSR) permisos[3]='x';
-                if (sb.st_mode&S_IRGRP) permisos[4]='r';    /*grupo*/
-                if (sb.st_mode&S_IWGRP) permisos[5]='w';
-                if (sb.st_mode&S_IXGRP) permisos[6]='x';
-                if (sb.st_mode&S_IROTH) permisos[7]='r';    /*resto*/
-                if (sb.st_mode&S_IWOTH) permisos[8]='w';
-                if (sb.st_mode&S_IXOTH) permisos[9]='x';
-                if (sb.st_mode&S_ISUID) permisos[3]='s';    /*setuid, setgid y stickybit*/
-                if (sb.st_mode&S_ISGID) permisos[6]='s';
-                if (sb.st_mode&S_ISVTX) permisos[9]='t';
-
-                printf("%s\t", permisos); //-long, reformateado
-            }
-        }
-
-        printf(" %10jd", sb.st_size); //normal
-
-        int isLink= 0;
-
-        switch (sb.st_mode & S_IFMT) {
-        case S_IFBLK:  printf("\33[35m");               break;//r-b
-        case S_IFCHR:  printf("\33[33m");               break;//rg-
-        case S_IFDIR:  printf("\33[34m");               break;//--b
-        case S_IFIFO:  printf("\33[36m");               break;//-gb
-        case S_IFLNK:  printf("\33[32m");  isLink = 1;  break;//-g- si esto imprimir link
-        case S_IFREG:  printf("\33[0m" );               break;//rgb
-        case S_IFSOCK: printf("\33[37m");               break;//-gb
-        default:       printf("\33[31m");               break;//r--
-        }
-
-        printf(" %s\33[0m", file);
-
-        if(isLink && lnk){
-            printf("\t -> ");
-            char path[PATH_MAX];
-            realpath(file, path);
-            printf("%s", path);
-        }
-
-        printf("\n");
+    printf("\n");
 }
 
 void listfile(char ** tokens, int token_number){
