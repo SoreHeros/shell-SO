@@ -14,7 +14,7 @@
 #include "sys_proc_info.h"
 #include "files.h"
 #include "../P1/dirs.h"
-#include "../P2/mallocs.h"
+#include "../P2/memory.h"
 
 void help(char **, int);
 void help_help();
