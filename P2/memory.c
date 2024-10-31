@@ -2,7 +2,7 @@
 // Created by heros on 30/10/24.
 //
 
-#include "mallocs.h"
+#include "memory.h"
 
 #include "../P0/lists.h"
 
