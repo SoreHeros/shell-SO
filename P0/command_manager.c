@@ -50,7 +50,8 @@ command_entry commands[] =
                     {"listfile\0",       NORMAL,         listfile,   listfile_help},
                     {"listdir\0",       NORMAL,         listdir,   listdir_help},
                     {"reclist\0",       NORMAL,         reclist,   reclist_help},
-
+                    {"allocate\0",       NORMAL,         allocate,   allocate_help},
+                    {"memdump\0",       NORMAL,         memdump,   memdump_help},
         };
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);

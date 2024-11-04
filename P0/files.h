@@ -8,6 +8,8 @@
 void files_init();
 void files_exit();
 
+
+
 void open_command(char **, int);
 void open_help();
 void close_command(char **, int);

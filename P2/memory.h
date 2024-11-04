@@ -7,15 +7,16 @@
 void mallocs_init();
 void mallocs_exit();
 
-//todo
 void allocate(char **, int);
 void allocate_help();
+void memdump(char **, int);
+void memdump_help();
+
+//todo
 void deallocate(char **, int);
 void deallocate_help();
 void memfill(char **, int);
 void memfill_help();
-void memdump(char **, int);
-void memdump_help();
 void memory(char **, int);
 void memory_help();
 void readfile(char **, int);
