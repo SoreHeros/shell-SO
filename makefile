@@ -10,7 +10,7 @@ $(result): $(main) $(objects)
 	gcc -Wall -c -o $@ $<
 
 comp:
-	zip -r9 ../$(result).zip . -x ".*" "*.o" "*.out" "*.md" "*.pdf" "*.txt" "testing*" "cmake*"
+	zip -r9 ../$(result).zip . -x ".*" "*.o" "*.out" "*.md" "*.pdf" "*.txt" "testing*" "cmake*" "$(result)"
 
 .PHONY: clean run leak
 
