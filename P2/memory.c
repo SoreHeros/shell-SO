@@ -493,18 +493,52 @@ void memfill_help(){
 }
 
 void stack(char ** tokens, int token_number){
-    if(token_number < 2){
+    if(token_number == 1){
         fprintf(stderr, "ERROR ON PARSING: ILLEGAL NUMBER OF ARGUMENTS\n");
         return;
     }
 
-    static void * stack = NULL;//asm("sp");
+    const char stack[] = ">STACK<\0>STACK<\0>STACK<\0>STACK<";
+
+
+
+    if(token_number == 0){
+        printf("%p\n", &stack);
+        return;
+    }
+
     int low = interpretNumberFormat(tokens[0]);
     int high= interpretNumberFormat(tokens[1]);
 
     memdumplocal((void *)&stack - low, low + high);
 }
 void stack_help(){
+    printf("\tstack inf sup\n");
+    printf("inf:\tthe number of bytes to be displayed under the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");
+    printf("sup:\tthe number of bytes to be displayed above the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");
+}
+
+void pmap(char ** tokens, int token_number){//todo
+    if(token_number == 1){
+        fprintf(stderr, "ERROR ON PARSING: ILLEGAL NUMBER OF ARGUMENTS\n");
+        return;
+    }
+
+    const char stack[] = ">STACK<\0>STACK<\0>STACK<\0>STACK<";
+
+
+
+    if(token_number == 0){
+        printf("%p\n", &stack);
+        return;
+    }
+
+    int low = interpretNumberFormat(tokens[0]);
+    int high= interpretNumberFormat(tokens[1]);
+
+    memdumplocal((void *)&stack - low, low + high);
+}
+void pmap_help(){//todo
     printf("\tstack inf sup\n");
     printf("inf:\tthe number of bytes to be displayed under the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");
     printf("sup:\tthe number of bytes to be displayed above the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");

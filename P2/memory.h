@@ -19,6 +19,8 @@ void memfill(char **, int);
 void memfill_help();
 void stack(char **, int);
 void stack_help();
+void pmap(char **, int);
+void pmap_help();
 
 //todo
 void deallocate(char **, int);
