@@ -21,6 +21,8 @@ void stack(char **, int);
 void stack_help();
 void pmap(char **, int);
 void pmap_help();
+void print(char **, int);
+void print_help();
 
 //todo
 void deallocate(char **, int);
@@ -29,9 +31,9 @@ void memory(char **, int);
 void memory_help();
 void writefile(char **, int);
 void writefile_help();
-void read(char **, int);
+void read_command(char **, int);
 void read_help();
-void write(char **, int);
+void write_command(char **, int);
 void write_help();
 void recurse(char **, int);
 void recurse_help();

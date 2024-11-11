@@ -12,6 +12,33 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+
+#include <sys/types.h>
+#include <sys/sysmacros.h>
+#include <unistd.h>
+
+#define PAGE_NONE            0U
+#define PAGE_R               1U
+#define PAGE_W               2U
+#define PAGE_RW              3U
+#define PAGE_E               4U
+#define PAGE_RE              5U
+#define PAGE_RWE             7U
+#define PAGE_SHARED          8U
+#define PAGE_PRIVATE        16U
+#define PAGE_STACK          32U
+
+typedef struct{
+    void                    *start;
+    size_t                   length;
+    unsigned long            offset;
+    dev_t                    device;
+    ino_t                    inode;
+    unsigned char            perms;
+    char                     name[];
+}page;
+
 
 typedef enum{
     MALLOC, SHARED, MAPPED
@@ -25,6 +52,10 @@ typedef struct alloc{
 } * alloc;
 
 list blocks_list;
+
+list pid_pages(int pid, list l);
+void free_pid_pages(list l);
+page * get_pointer_page(void * p, list l);
 
 void mallocs_init(){
     blocks_list = list_init();
@@ -125,8 +156,11 @@ void allocate_help(){
 }
 
 void memdumplocal(uint8_t * addr, int size){
-    for(uintptr_t p = (uintptr_t)addr & ~(uintptr_t)0xf; p < (uintptr_t)(addr + size); p += 0x10){
-        printf("0x%016lx     ", p);
+    list l = pid_pages(getpid(), NULL);
+    uint8_t prevBytes[0x10] = {0};
+    int isRep = 0;
+    uintptr_t p;
+    for(p = (uintptr_t)addr & ~(uintptr_t)0xf; p < (uintptr_t)(addr + size); p += 0x10){
         uint8_t bytes[0x10] = {0};
 
 
@@ -134,6 +168,17 @@ void memdumplocal(uint8_t * addr, int size){
         for(int i = 0; i < 0x10; i++)
             if(!(p + i < (uintptr_t)addr || (uintptr_t)(addr + size) <= p + i))
                 bytes[i] = ((uint8_t *)p)[i];
+
+        //print start
+        if(!memcmp(bytes, prevBytes, 0x10)){
+            if(!isRep){
+                isRep = 1;
+                printf("[...]\n");
+            }
+            continue;//todo meter flag
+        }
+        printf("0x%016lx     ", p);
+        isRep = 0;
 
         //print bytes
         for(int i = 0; i < 0x8; i++)
@@ -168,8 +213,59 @@ void memdumplocal(uint8_t * addr, int size){
                 printf(".");
             else
                 printf("%c", bytes[i]);
-        printf("]\n");
+        printf("] ");
+
+        //print pointers
+        for(int i = 0; i < 2; i++){
+            unsigned long int p = ((unsigned long int *)bytes)[i];
+            char code[8] = "\033[91m";
+            page * pg = get_pointer_page((void *)p, l);
+
+            //CODIGO COLORES:
+            //NULL      r--
+            //---       r--
+            //r--       --b
+            //rw-       -gb
+            //r-x       r-b
+            //rwx       rgb
+            //shared    rg-
+            //stack     -g-
+
+            if(pg != NULL){
+                switch(pg->perms & 0b111){
+                case PAGE_NONE:
+                    break;
+                case PAGE_R:
+                    code[3] = '4';
+                    break;
+                case PAGE_RW:
+                    code[3] = '6';
+                    break;
+                case PAGE_RE:
+                    code[3] = '5';
+                    break;
+                case PAGE_RWE:
+                    code[3] = '9';
+                    code[2] = '3';
+                    break;
+                default:
+                    code[3] = '0';
+                }
+
+                if(pg->perms & PAGE_SHARED)
+                    code[3] = '3';
+                else if(pg->perms & PAGE_STACK)
+                    code[3] = '2';
+            }
+
+            printf("%s 0x%016lx ",code, p);
+        }
+        printf("\33[0m\n");
+        memcpy(prevBytes, bytes, 0x10);
     }
+    if(isRep)
+        printf("0x%016lx\n", p);
+    free_pid_pages(l);
 }
 
 void memdump(char ** tokens, int token_number){
@@ -179,37 +275,39 @@ void memdump(char ** tokens, int token_number){
         return;
     }
 
-    if(3 < token_number){
-        fprintf(stderr, "ERROR ON PARSING: ILLEGAL NUMBER OF ARGUMENTS\n");
-        return;
-    }
 
-    uint8_t * addr;
-    long long int size =  interpretNumberFormat(tokens[token_number - 1]);
-    if(token_number == 1){
-        addr = (uint8_t *)size;
-        size = 0;
-    }else
-        addr = (uint8_t *)interpretNumberFormat(tokens[token_number - 2]);
     char safe = 1;
+    uint8_t * addr;
+    long long int size;
     if(!strcmp(tokens[0], "-unsafe"))
         safe = 0;
+
+    if(safe){
+        addr = (uint8_t *)interpretNumberFormat(tokens[0]);
+        if(token_number > 1)
+            size = interpretNumberFormat(tokens[1]);
+        else
+            size = 0;
+    }else{
+        addr = (uint8_t *)interpretNumberFormat(tokens[1]);
+        if(token_number > 2)
+            size = interpretNumberFormat(tokens[2]);
+        else
+            size = 0;
+    }
 
     //test if is malloced
     int memblock = allocatedAt(addr, size);
     if(size == 0 && memblock >= 0){
         alloc a = list_get(blocks_list, memblock);
         size = a->addr + a->size - (void *)addr;
+    }else if(size == 0){
+        size = 8;
     }
     if(memblock == -1 && safe){
         fprintf(stderr, "ERROR ON SAFE MODE: ADDR ISN'T ALLOCATED OR SIZE IS TOO BIG (use -unsafe to ignore)\n");
         return;
     }
-
-
-    //print starting line
-  //printf(      "0x0000000000000000     f0 f1 f2 f3 f4 f5 f6 f7   f8 f9 fa fb fc fd fe ff     [01234567 89abcdef]\n");
-    //printf("                        0  1  2  3  4  5  6  7    8  9  a  b  c  d  e  f\n");
 
     memdumplocal(addr, size);
 }
@@ -217,7 +315,7 @@ void memdump_help(){
     printf("\tmemdump [-unsafe] addr [size]\n");
     printf("empty:\tshows the malloced memory\n");
     printf("addr:\tthe address of the memory to be dumped (can be decimal, hex(0x), bin(0b), oct(0o))\n");
-    printf("size:\tthe number of bytes to be dumped (can be decimal, hex(0x), bin(0b), oct(0o)) (0 for everything untill end of block)\n");
+    printf("size:\tthe number of bytes to be dumped (can be decimal, hex(0x), bin(0b), oct(0o)) (0 for everything untill end of block or 8 bytes depending on safety)\n");
     printf("-unsafe:\tignores the segfault precautions\n");
 }
 
@@ -240,7 +338,7 @@ void readfile(char ** tokens, int token_number){
     if(token_number == 1){
         //create block of file size
         fseek(f, 0, SEEK_END);
-        size = ftell(f);
+        size = ftell(f) + 1;//+1 for \0
         fseek(f, 0, SEEK_SET);
         allocateMalloc(size);
         addr = ((alloc)list_get(blocks_list, list_length(blocks_list) - 1))->addr;
@@ -267,6 +365,8 @@ void readfile(char ** tokens, int token_number){
     for(int i = 0; i < size; i++){
         addr[i] = fgetc(f);
     }
+
+    addr[size - 1] = '\0';
 
     printf("%i bytes written to %p\n", size, addr);
 
@@ -498,7 +598,7 @@ void stack(char ** tokens, int token_number){
         return;
     }
 
-    const char stack[] = ">STACK<\0>STACK<\0>STACK<\0>STACK<";
+    const char stack[] = ">STACK<";
 
 
 
@@ -518,28 +618,165 @@ void stack_help(){
     printf("sup:\tthe number of bytes to be displayed above the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");
 }
 
-void pmap(char ** tokens, int token_number){//todo
-    if(token_number == 1){
-        fprintf(stderr, "ERROR ON PARSING: ILLEGAL NUMBER OF ARGUMENTS\n");
-        return;
+//updates the list l with the current process pages, if l is null it will create a new list, returns the process page list
+list pid_pages(int pid, list l){
+
+    if(l == NULL){
+        l = list_init();
+    }else{
+        //empty list
+        while(list_length(l)){
+            free(list_pop(l));
+        }
     }
 
-    const char stack[] = ">STACK<\0>STACK<\0>STACK<\0>STACK<";
+    size_t         size = 0;
+    FILE          *maps_file;
+    char          *line = NULL;
 
+    if (pid > 0) {
+        char path[128];
+        int  pathlen;
 
+        pathlen = snprintf(path, sizeof(path), "/proc/%ld/maps", (long)pid);
+        if (pathlen < 12) {
+            errno = EINVAL;
+            return NULL;
+        }
 
-    if(token_number == 0){
-        printf("%p\n", &stack);
-        return;
+        maps_file = fopen(path, "r");
+    } else
+        maps_file = fopen("/proc/self/maps", "r");
+
+    if (!maps_file)
+        return NULL;
+
+    while (getline(&line, &size, maps_file) > 0) {
+        page *curr;
+        char           perms[8];
+        unsigned int   devmajor, devminor;
+        unsigned long  addr_start, addr_end, offset, inode;
+        int            name_start = 0;
+        int            name_end = 0;
+
+        if (sscanf(line, "%lx-%lx %7s %lx %u:%u %lu %n%*[^\n]%n",&addr_start, &addr_end, perms, &offset, &devmajor, &devminor, &inode, &name_start, &name_end) < 7) {
+            fclose(maps_file);
+            free(line);
+            errno = EIO;
+            return NULL;
+        }
+
+        if (name_end <= name_start)
+            name_start = name_end = 0;
+
+        curr = malloc(sizeof(page) + (size_t)(name_end - name_start) + 1);
+        if (!curr) {
+            fclose(maps_file);
+            free(line);
+            errno = ENOMEM;
+            return NULL;
+        }
+
+        if (name_end > name_start)
+            memcpy(curr->name, line + name_start, name_end - name_start);
+        curr->name[name_end - name_start] = '\0';
+
+        curr->start = (void *)addr_start;
+        curr->length = addr_end - addr_start;
+        curr->offset = offset;
+        curr->device = makedev(devmajor, devminor);
+        curr->inode = inode;
+
+        curr->perms = 0U;
+
+        if (strchr(perms, 'r'))
+            curr->perms |= PAGE_R;
+        if (strchr(perms, 'w'))
+            curr->perms |= PAGE_W;
+        if (strchr(perms, 'x'))
+            curr->perms |= PAGE_E;
+        if (strchr(perms, 's'))
+            curr->perms |= PAGE_SHARED;
+        if (strchr(perms, 'p'))
+            curr->perms |= PAGE_PRIVATE;
+        if(!strcmp(curr->name, "[stack]"))
+            curr->perms |= PAGE_STACK;
+
+        list_append(l, curr);
     }
 
-    int low = interpretNumberFormat(tokens[0]);
-    int high= interpretNumberFormat(tokens[1]);
+    free(line);
 
-    memdumplocal((void *)&stack - low, low + high);
+    if (!feof(maps_file) || ferror(maps_file)) {
+        fclose(maps_file);
+        errno = EIO;
+        return NULL;
+    }
+    if (fclose(maps_file)) {
+        errno = EIO;
+        return NULL;
+    }
+
+    errno = 0;
+
+    return l;
 }
-void pmap_help(){//todo
-    printf("\tstack inf sup\n");
-    printf("inf:\tthe number of bytes to be displayed under the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");
-    printf("sup:\tthe number of bytes to be displayed above the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");
+
+page * get_pointer_page(void * p, list l){
+    for(int i = 0; i < list_length(l); i++){
+        page * pg = list_get(l, i);
+        if(pg->start <= p && p < pg->start + pg->length)
+            return pg;
+    }
+    return NULL;
+}
+
+void free_pid_pages(list l){
+    while(list_length(l))
+        free(list_pop(l));
+    list_free(l);
+}
+
+void pmap(char ** tokens, int token_number){
+
+    int pid;
+
+    if(token_number == 0)
+        pid = getpid();
+    else
+        pid = atoi(tokens[0]);
+
+    list l = pid_pages(pid, NULL);
+
+    for(int i = 0; i < list_length(l); i++){
+        page * p = list_get(l, i);
+        printf("%p: %lu %lu %01X %li %li %s\n", p->start, p->offset, p->length, p->perms, p->device, p->inode, p->name);
+    }
+
+    free_pid_pages(l);
+}
+void pmap_help(){
+    printf("\tpmap [pid]\n");
+    printf("empty:\tuses self as pid\n");
+    printf("pid:\tthe pid of the process to get pmap\n");
+}
+
+
+void print(char ** tokens, int token_number){
+    char * addr = (char *)interpretNumberFormat(tokens[0]);
+    if(token_number > 1){
+        int size = interpretNumberFormat(tokens[1]);
+        for(int i = 0; i < size; i++)
+            putchar(addr[i]);
+    }else{
+        for(;*addr!='\0';addr++)
+            putchar(*addr);
+    }
+    putchar('\n');
+}
+void print_help(){
+    printf("\tprint addr [size]\n");
+    printf("addr:\tmem dir to print\n");
+    printf("empty:\teverything untill '\\0'\n");
+    printf("size:\tignores '\\0' and prints size number of characters\n");
 }

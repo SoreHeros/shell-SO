@@ -9,6 +9,9 @@
 #include <sys/ioctl.h>
 
 #include "command_manager.h"
+
+#include <time.h>
+
 #include "lists.h"
 #include "basic_functions.h"
 #include "sys_proc_info.h"
@@ -58,11 +61,12 @@ command_entry commands[] =
                     { "memfill",   NORMAL,        memfill,  memfill_help},
                     { "stack",     NORMAL,        stack,    stack_help},
                     { "pmap",      NORMAL,        pmap,     pmap_help},
+                    { "print",     NORMAL,        print,    print_help},
         };
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);
 list historial;
-list color_prompt;
+unsigned int static_seed;
 
 //todo fix recursions
 #define RECURSION_LIMIT 10
@@ -92,29 +96,18 @@ void historic_execute(int n){
 }
 
 void print_prompt(char * prompt){
+    rand_r(&static_seed);
+    unsigned int seed = static_seed;
     char code[8] = "\033[33m";
-    for(int i = list_length(color_prompt); i < strlen(prompt); i++){ //rellenar hasta que llegue al tamaño de la prompt
-        if(rand()&0b1)//brillante o no brillante
+    for(int i = 0; prompt[i] != '\0'; i++){
+        int r = rand_r(&seed);
+        if(r&0b1)//brillante o no brillante
             code[2] = '3';
         else
             code[2] = '9';
 
-        code[3] = '1' + rand() % 7; //todos los colores excepto el negro
-        list_append(color_prompt, *(void **)code); //como code siempre va a ser menor que un puntero, se puede guardar directamente
-    }
-    list_pop(color_prompt); //eliminar el último
-    if(rand()&0b1)//brillante o no brillante
-        code[2] = '3';
-    else
-        code[2] = '9';
-
-    code[3] = '1' + rand() % 7; //todos los colores excepto el negro
-    list_add(color_prompt, 0, *(void **)code);//añadir otro al principio
-
-    //imprimir
-    for(int i = 0; prompt[i] != '\0'; i++){
-        void * aux = list_get(color_prompt, i);
-        printf("%s%c", (char *)&aux, prompt[i]);//parseo raro para que lea el dato como si fuera un string
+        code[3] = '1' + r % 7; //todos los colores excepto el negro
+        printf("%s%c", code, prompt[i]);//parseo raro para que lea el dato como si fuera un string
     }
 
     printf("\033[0m");
@@ -183,7 +176,7 @@ int bsearch_comparator(const void * key, const void * data){
 
 void command_manager_init(){
     historial = list_init();
-    color_prompt = list_init();
+    static_seed = time(NULL);
     commands_pointer = malloc(commands_len * sizeof(command_entry *));
     for(int i = 0; i < commands_len; i++)
         commands_pointer[i] = &commands[i];
@@ -195,7 +188,6 @@ void command_manager_exit(){
     for(int i = 0; i < list_length(historial); i++)
         free(list_get(historial, i));
     list_free(historial);
-    list_free(color_prompt);//como es asignación directa no hace falta liberar elemento a elemento
     free(commands_pointer);
     files_exit();
     mallocs_exit();
