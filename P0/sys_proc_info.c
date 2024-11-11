@@ -9,8 +9,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "lists.h"
-
 void pid(char **, int){
     printf("%i\n", getpid());
 }

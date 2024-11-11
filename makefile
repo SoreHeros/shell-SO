@@ -1,6 +1,6 @@
 result = p2
 main = p2.c
-objects = $(patsubst %.c, %.o, $(wildcard P0/*.c) $(wildcard P1/*.c) $(wildcard P2/*.c))
+objects = $(patsubst %.c, %.o, $(wildcard P0/*.c) $(wildcard P1/*.c) $(wildcard P2/*.c) $(wildcard utils/*.c))
 
 $(result): $(main) $(objects)
 	gcc -Wall -o $(result) $(main) $(objects)

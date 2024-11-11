@@ -12,12 +12,12 @@
 
 #include <time.h>
 
-#include "lists.h"
 #include "basic_functions.h"
 #include "sys_proc_info.h"
 #include "files.h"
 #include "../P1/dirs.h"
 #include "../P2/memory.h"
+#include "../utils/lists.h"
 
 void help(char **, int);
 void help_help();

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include "../P0/lists.h"
+#include "../utils/lists.h"
 
 #include <time.h>
 #include <stdlib.h>
