@@ -53,7 +53,7 @@ command_entry commands[] =
                     { "cwd",       NORMAL,        cwd,      cwd_help},
                     { "listfile",  NORMAL,        listfile, listfile_help},
                     { "listdir",   NORMAL,        listdir,  listdir_help},
-                    { "reclist",   NORMAL,        reclist,  reclist_help},
+                    //{ "reclist",   NORMAL,        reclist,  reclist_help},
                     { "allocate",  NORMAL,        allocate, allocate_help},
                     { "memdump",   NORMAL,        memdump,  memdump_help},
                     { "readfile",  NORMAL,        readfile, readfile_help},

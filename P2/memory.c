@@ -158,7 +158,7 @@ void allocate_help(){
 void memdumplocal(uint8_t * addr, int size){
     list l = pid_pages(getpid(), NULL);
     uint8_t prevBytes[0x10] = {0};
-    int isRep = 0;
+    int isRep = -1;//-1 para que siempre imprima por lo menos el primero
     uintptr_t p;
     for(p = (uintptr_t)addr & ~(uintptr_t)0xf; p < (uintptr_t)(addr + size); p += 0x10){
         uint8_t bytes[0x10] = {0};
@@ -170,7 +170,7 @@ void memdumplocal(uint8_t * addr, int size){
                 bytes[i] = ((uint8_t *)p)[i];
 
         //print start
-        if(!memcmp(bytes, prevBytes, 0x10)){
+        if(isRep >= 0 && !memcmp(bytes, prevBytes, 0x10)){
             if(!isRep){
                 isRep = 1;
                 printf("[...]\n");
