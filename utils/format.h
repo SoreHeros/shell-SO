@@ -24,4 +24,6 @@ void rand_color_print(char *);
 void get_flags(char ** tokens, int flagLen, char * flags[flagLen], int * retFlags[flagLen]);
 integer formated_number(char *);
 
+
+
 #endif //FORMAT_H

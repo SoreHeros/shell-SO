@@ -57,7 +57,7 @@ command_entry commands[] =
                     { "allocate",  NORMAL,        allocate, allocate_help},
                     { "memdump",   NORMAL,        memdump,  memdump_help},
                     { "readfile",  NORMAL,        readfile, readfile_help},
-                    { "process",   NORMAL,        process,  process_help},
+                    //{ "process",   NORMAL,        process,  process_help},
                     { "memfill",   NORMAL,        memfill,  memfill_help},
                     { "stack",     NORMAL,        stack,    stack_help},
                     { "pmap",      NORMAL,        pmap,     pmap_help},

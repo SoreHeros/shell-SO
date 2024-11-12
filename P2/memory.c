@@ -18,13 +18,15 @@
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
+#include <sys/shm.h>
+
 #define PAGE_NONE            0U
 #define PAGE_R               1U
 #define PAGE_W               2U
 #define PAGE_RW              3U
-#define PAGE_E               4U
-#define PAGE_RE              5U
-#define PAGE_RWE             7U
+#define PAGE_X               4U
+#define PAGE_RX              5U
+#define PAGE_RWX             7U
 #define PAGE_SHARED          8U
 #define PAGE_PRIVATE        16U
 #define PAGE_STACK          32U
@@ -63,7 +65,10 @@ void mallocs_init(){
 void mallocs_exit(){
     for(int i = 0; i < list_length(blocks_list); i++){
         alloc a = list_get(blocks_list, i);
-        free(a->addr);
+        if(a->type != SHARED)
+            free(a->addr);
+        else
+            printf("WARNING: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i", 1234);//todo add key
         free(a);
     }
     list_free(blocks_list);
@@ -92,7 +97,7 @@ void printMemBlocks(){
         return;
     }
 
-    for(int i = 0; i < len; i++){
+    for(int i = 0; i < len; i++){//todo print mode
         alloc a = list_get(blocks_list, i);
         struct tm * time = localtime(&a->time);
         printf("%04i/%02i/%02i-%02i:%02i:%02i\t", time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min, time->tm_sec);
@@ -111,13 +116,13 @@ int allocatedAt(void * p, unsigned long long int size){
 }
 
 void allocateMalloc(unsigned size){
-    alloc a = malloc(sizeof(struct alloc));
+    alloc a = calloc(1, sizeof(struct alloc));
     if(a == NULL){
         perror("ERROR ON ALLOCATE (new list element)");
         return;
     }
     time(&a->time);
-    a->addr = malloc(size);
+    a->addr = calloc(1, size);
     if(a->addr == NULL){
         perror("ERROR ON ALLOCATE (allocating amemory)");
         free(a);
@@ -131,15 +136,78 @@ void allocateMalloc(unsigned size){
     printf("allocated %i bytes on %p\n", size, a->addr);
 }
 
+
+void createShared(int key, long size){
+    int id = shmget(key, size, 0777 | IPC_CREAT | IPC_EXCL);
+    if(id == -1){
+        perror("ERROR ON CREATING SHARED MEMORY:");
+        return;
+    }
+    struct shmid_ds s;
+
+    void * p = shmat(id, NULL, 0);
+    alloc a = malloc(sizeof(struct alloc));
+
+    shmctl(id, IPC_STAT, &s);
+    a->addr = p;
+    a->size = size;
+    a->time = s.shm_atime;
+    a->type = SHARED;
+
+    list_append(blocks_list, a);
+}
+
+void linkShared(int key){
+    int id = shmget(key, 0, 0777);
+    if(id == -1){
+        perror("ERROR ON LINKING SHARED MEMORY:");
+        return;
+    }
+    struct shmid_ds s;
+
+    void * p = shmat(id, NULL, 0);
+    alloc a = malloc(sizeof(struct alloc));
+
+    shmctl(id, IPC_STAT, &s);
+    a->addr = p;
+    a->size = s.shm_segsz;
+    a->time = s.shm_atime;
+    a->type = SHARED;
+
+    list_append(blocks_list, a);
+}
+
 void allocate(char ** tokens, int token_number){//todo allocate -createshared -shared -mmap
     if(token_number == 0){
         printMemBlocks();
         return;
     }
 
-    for(int i = 0; i < token_number; i++){
-        long long int res = interpretNumberFormat(tokens[i]);
-        allocateMalloc(res);
+    if(!strcmp(tokens[0], "-malloc")){
+        if(token_number < 2){
+            fprintf(stderr, "ERROR ON PARSING: -malloc must have a numerical argument after it\n");
+            return;
+        }
+        allocateMalloc(interpretNumberFormat(tokens[1]));
+    }else if(!strcmp(tokens[0], "-mmap")){
+        if(token_number < 3){
+            fprintf(stderr, "ERROR ON PARSING: -mmap must have a file name and perms after it\n");
+            return;
+        }//todo
+    }else if(!strcmp(tokens[0], "-createshared")){
+        if(token_number < 3){
+            fprintf(stderr, "ERROR ON PARSING: -createshared must have a key and size it\n");
+            return;
+        }
+        createShared(interpretNumberFormat(tokens[1]), interpretNumberFormat(tokens[2]));
+    }else if(!strcmp(tokens[0], "-shared")){
+        if(token_number < 2){
+            fprintf(stderr, "ERROR ON PARSING: -shared must have a key it\n");
+            return;
+        }
+        linkShared(interpretNumberFormat(tokens[1]));
+    }else{
+        fprintf(stderr, "ERROR ON PARSING: %s isn't a valid flag\n", tokens[1]);
     }
 }
 void allocate_help(){
@@ -218,43 +286,26 @@ void memdumplocal(uint8_t * addr, int size){
         //print pointers
         for(int i = 0; i < 2; i++){
             unsigned long int p = ((unsigned long int *)bytes)[i];
-            char code[8] = "\033[91m";
+            char code[8] = "\033[90m";
             page * pg = get_pointer_page((void *)p, l);
 
             //CODIGO COLORES:
-            //NULL      r--
-            //---       r--
-            //r--       --b
-            //rw-       -gb
-            //r-x       r-b
-            //rwx       rgb
-            //shared    rg-
-            //stack     -g-
+            //NULL      ---
+            //---       ---
+            //r--       r--
+            //-w-       -g-
+            //--x       --b
+            //shared    -gb //-wx nunca va a pasar
+            //stack     -g- //-w- nunca va a pasar
 
             if(pg != NULL){
-                switch(pg->perms & 0b111){
-                case PAGE_NONE:
-                    break;
-                case PAGE_R:
-                    code[3] = '4';
-                    break;
-                case PAGE_RW:
-                    code[3] = '6';
-                    break;
-                case PAGE_RE:
-                    code[3] = '5';
-                    break;
-                case PAGE_RWE:
-                    code[3] = '9';
-                    code[2] = '3';
-                    break;
-                default:
-                    code[3] = '0';
-                }
+
+                code[3] = '0' + (pg->perms & 0b111);
 
                 if(pg->perms & PAGE_SHARED)
-                    code[3] = '3';
-                else if(pg->perms & PAGE_STACK)
+                    code[3] = '6';
+
+                if(pg->perms & PAGE_STACK)
                     code[3] = '2';
             }
 
@@ -694,7 +745,7 @@ list pid_pages(int pid, list l){
         if (strchr(perms, 'w'))
             curr->perms |= PAGE_W;
         if (strchr(perms, 'x'))
-            curr->perms |= PAGE_E;
+            curr->perms |= PAGE_X;
         if (strchr(perms, 's'))
             curr->perms |= PAGE_SHARED;
         if (strchr(perms, 'p'))
@@ -737,6 +788,25 @@ void free_pid_pages(list l){
     list_free(l);
 }
 
+char * get_page_perms(char res[], int perms){
+    res[0] = '-';
+    res[1] = '-';
+    res[2] = '-';
+    res[3] = '-';
+    res[4] = '\0';
+
+    if(perms & PAGE_R)
+        res[0] = 'r';
+    if(perms & PAGE_W)
+        res[1] = 'w';
+    if(perms & PAGE_X)
+        res[2] = 'x';
+    if(perms & PAGE_SHARED)
+        res[3] = 's';
+
+    return res;
+}
+
 void pmap(char ** tokens, int token_number){
 
     int pid;
@@ -750,7 +820,8 @@ void pmap(char ** tokens, int token_number){
 
     for(int i = 0; i < list_length(l); i++){
         page * p = list_get(l, i);
-        printf("%p: %lu %lu %01X %li %li %s\n", p->start, p->offset, p->length, p->perms, p->device, p->inode, p->name);
+        char perms[5] = {0};
+        printf("0x%016lx: 0x%08lx %s %s\n", (uintptr_t)p->start,  p->length, get_page_perms(perms, p->perms), p->name);
     }
 
     free_pid_pages(l);
