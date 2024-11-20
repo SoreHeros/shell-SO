@@ -23,10 +23,10 @@ void pmap(char **, int);
 void pmap_help();
 void print(char **, int);
 void print_help();
-
-//todo
 void deallocate(char **, int);
 void deallocate_help();
+
+//todo
 void memory(char **, int);
 void memory_help();
 void writefile(char **, int);

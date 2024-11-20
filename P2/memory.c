@@ -7,18 +7,22 @@
 #include <stdint.h>
 
 #include "../utils/lists.h"
+#include "../utils/shared_vars.h"
 
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <sys/types.h>
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
 #include <sys/shm.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 
 #define PAGE_NONE            0U
 #define PAGE_R               1U
@@ -177,11 +181,41 @@ void linkShared(int key){
     list_append(blocks_list, a);
 }
 
-void allocate(char ** tokens, int token_number){//todo allocate -createshared -shared -mmap
+void allocateMap(char * name, char * perms){
+    int protection=0;
+    if (strlen(perms)<4) {
+        if (strchr(perms,'r')!=NULL) protection|=PROT_READ;
+        if (strchr(perms,'w')!=NULL) protection|=PROT_WRITE;
+        if (strchr(perms,'x')!=NULL) protection|=PROT_EXEC;
+    }
+
+    int df = -1, map=MAP_PRIVATE, modo=O_RDONLY;
+    struct stat s;
+    void *p;
+
+    if (protection&PROT_WRITE)
+        modo=O_RDWR;
+    if (stat(name,&s)==-1 || (df=open(name, modo))==-1)
+        p = NULL;
+    if ((p=mmap (NULL,s.st_size, protection,map,df,0))==MAP_FAILED)
+        p = NULL;
+
+    /* Guardar en la lista    InsertarNodoMmap (&L,p, s.st_size,df,fichero); */
+    /* Gurdas en la lista de descriptores usados df, fichero*/
+
+    if (p==NULL)
+        perror ("Imposible mapear fichero");
+    else{
+        printf ("fichero %s mapeado en %p\n", name, p);
+    }
+
+}
+
+void allocate(char ** tokens, int token_number){//todo allocate -mmap
     if(token_number == 0){
         printMemBlocks();
         return;
-    }
+    }//todo hacer el print de los bloques específicos
 
     if(!strcmp(tokens[0], "-malloc")){
         if(token_number < 2){
@@ -193,7 +227,8 @@ void allocate(char ** tokens, int token_number){//todo allocate -createshared -s
         if(token_number < 3){
             fprintf(stderr, "ERROR ON PARSING: -mmap must have a file name and perms after it\n");
             return;
-        }//todo
+        }
+        allocateMap(tokens[1], tokens[2]);
     }else if(!strcmp(tokens[0], "-createshared")){
         if(token_number < 3){
             fprintf(stderr, "ERROR ON PARSING: -createshared must have a key and size it\n");
@@ -221,6 +256,24 @@ void allocate_help(){
     printf("-mmap:\tdumps the file contents into a new memory block\n");
     printf("-createshared:\tasigns a shared memory block with the specified key\n");
     printf("-shared:\tattaches the memory block with the specified key\n");
+}
+
+void deallocate(char ** tokens, int token_number){
+
+}
+
+void deallocate_help(){
+    printf("\tdeallocate [addr] [-malloc n] [-mmap file] [-delkey cl] [-shared  cl]\n");
+    printf("empty:\tshows the malloced memory\n");
+    printf("addr:\taddress to free (can be decimal, hex(0x), bin(0b), oct(0o))\n");
+    printf("n:\tnumber (can be decimal, hex(0x), bin(0b), oct(0o))\n");
+    printf("file:\tfile name\n");
+    printf("perm:\tfile permissions\n");
+    printf("cl:\tshared memory key\n");
+    printf("-malloc:\tdeallocates a memory block of the specified size\n");
+    printf("-mmap:\tdeallocates the memory asigned to the dump of thee specified file\n");
+    printf("-delkey:\tdeletes the specified key\n");
+    printf("-shared:\tdeataches the memory block with the specified key\n");
 }
 
 void memdumplocal(uint8_t * addr, int size){
