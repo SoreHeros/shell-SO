@@ -60,7 +60,7 @@ command_entry commands[] =
                     //{ "process",   NORMAL,        process,  process_help},
                     { "memfill",   NORMAL,        memfill,  memfill_help},
                     { "stack",     NORMAL,        stack,    stack_help},
-                    { "pmap",      NORMAL,        pmap,     pmap_help},
+                    { "pmap",      NORMAL,        pmap_command,     pmap_help},
                     { "print",     NORMAL,        print,    print_help},
         };
 command_entry ** commands_pointer;

@@ -19,7 +19,7 @@ void memfill(char **, int);
 void memfill_help();
 void stack(char **, int);
 void stack_help();
-void pmap(char **, int);
+void pmap_command(char **, int);
 void pmap_help();
 void print(char **, int);
 void print_help();
