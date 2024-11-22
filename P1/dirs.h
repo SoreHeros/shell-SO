@@ -17,13 +17,13 @@ void listdir(char **, int);
 void listdir_help();
 
 //todo
-void reclist(char **, int);
-void reclist_help();
-void revlist(char **, int);
-void revlist_help();
-void erase(char **, int);
-void erase_help();
-void delrec(char **, int);
-void delrec_help();
+//void reclist(char **, int);
+//void reclist_help();
+//void revlist(char **, int);
+//void revlist_help();
+//void erase(char **, int);
+//void erase_help();
+//void delrec(char **, int);
+//void delrec_help();
 
 #endif //FILES_H

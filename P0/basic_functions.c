@@ -14,7 +14,7 @@ void echo_help(){
     printf("\techo [tokens]\nprints each token that it recives on a new line\n");
 }
 
-void quit(char ** tokens, int token_number){
+void quit(char ** , int ){
     printf("quitting\n");
 }
 void quit_help(){
@@ -22,14 +22,14 @@ void quit_help(){
 }
 
 
-void exit_command(char ** tokens, int token_number){
+void exit_command(char ** , int ){
     printf("exitting\n");
 }
 void exit_help(){
     printf("\texit\nexits the shell\n");
 }
 
-void bye(char ** tokens, int token_number){
+void bye(char ** , int ){
     printf("goodbye!\n");
 }
 void bye_help(){

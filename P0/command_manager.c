@@ -291,7 +291,8 @@ void get_cursor_pos(int * x, int * y){//esta función hace que algunas veces se 
 //lee la entrada y la procesa en tokens, devuelve 1, si la entrada es demasiado grande devuelve 0
 int read_input(char * string){
 
-    int string_pos, focused_command, ox, oy;
+    int focused_command, ox, oy;
+    unsigned int string_pos;
     struct termios old_tio, new_tio;
 
     /* get the terminal settings for stdin */

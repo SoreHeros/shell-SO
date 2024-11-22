@@ -21,7 +21,6 @@ void sig_handler(int sig){
             command_manager_exit();
             tcsetattr(0,TCSANOW,&old_tio);
             exit(0);//todo cambiar de una salida directa a una variable???
-
     }
 }
 

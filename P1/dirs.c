@@ -246,6 +246,7 @@ void listdir_help(){
     printf("-hid:\tadds hidden files\n");
 }
 
+/*
 void reclistLocal(char lng, char acc, char lnk, char hid, char * dir){//todo fix
     DIR *d;
     struct dirent *dirent;
@@ -365,3 +366,4 @@ void delrec_help(){
     printf("\tdelrec name [...]\n");
     printf("name:\tname of the file to be errased\n");
 }
+*/

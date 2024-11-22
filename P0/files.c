@@ -95,7 +95,7 @@ void open_help(){
     printf("tr:\tmode truncate\n");
 }
 void close_command(char ** tokens, int token_number){
-    if(tokens <= 0)
+    if(token_number <= 0)
         return;
 
     int ds = atoi(tokens[0]);

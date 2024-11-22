@@ -25,7 +25,7 @@
 #include <sys/mman.h>
 
 typedef enum{
-    MALLOC, SHARED, MAPPED
+    ANY = 0b111, MALLOC = 0b1, SHARED = 0b10, MAPPED = 0b100
 }alloc_type;
 
 typedef struct alloc{
@@ -33,6 +33,8 @@ typedef struct alloc{
     time_t time;
     unsigned int size;
     alloc_type type;
+    int key;
+    char name[];//todo union
 } * alloc;
 
 list blocks_list;
@@ -46,7 +48,7 @@ void mallocs_exit(){
         if(a->type != SHARED && a->type != MAPPED)
             free(a->addr);
         else
-            printf("WARNING: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i", 1234);//todo add key
+            printf("WARNING: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i", a->key);//todo add key
         free(a);
     }
     list_free(blocks_list);
@@ -67,19 +69,53 @@ long long int interpretNumberFormat(char * s){
     return strtol(s, NULL, 10);
 }
 
-void printMemBlocks(){
+void printMemBlocks(alloc_type t){//todo add block type
     int len = list_length(blocks_list);
 
-    if(len == 0){
-        printf("Block list is empty\n");
-        return;
+    int printed = 0;
+    for(int i = 0; i < len; i++){
+        //todo print mode
+        alloc a = list_get(blocks_list, i);
+        if(a->type & t){
+            struct tm * time = localtime(&a->time);
+            printf("%04i/%02i/%02i-%02i:%02i:%02i\t", time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min, time->tm_sec);
+            printf("0x%016lx 0x%08x(%10u) ", (uintptr_t) a->addr, a->size, a->size);
+            switch (a->type){
+                case ANY:
+                    printf("ANY    ");
+                    break;
+                case MALLOC:
+                    printf("MALLOC ");
+                    break;
+                case SHARED:
+                    printf("SHARED KEY:%i", a->key);
+                    break;
+                case MAPPED:
+                    printf("MAPPED NAME:%s", a->name);
+                    break;
+            }
+            printf("\n");
+            printed++;
+        }
     }
 
-    for(int i = 0; i < len; i++){//todo print mode
-        alloc a = list_get(blocks_list, i);
-        struct tm * time = localtime(&a->time);
-        printf("%04i/%02i/%02i-%02i:%02i:%02i\t", time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min, time->tm_sec);
-        printf("0x%016lx 0x%08x(%10u) \n", (uintptr_t) a->addr, a->size, a->size);
+    if(printed == 0){
+        printf("There aren't any blocks with type: ");
+        switch (t){
+            case ANY:
+                printf("ANY    ");
+                break;
+            case MALLOC:
+                printf("MALLOC ");
+                break;
+            case SHARED:
+                printf("SHARED ");
+                break;
+            case MAPPED:
+                printf("MAPPED ");
+                break;
+        }
+        printf("\n");
     }
 }
 
@@ -193,7 +229,7 @@ void allocateMap(char * name, char * perms){
 
 void allocate(char ** tokens, int token_number){//todo allocate -mmap
     if(token_number == 0){
-        printMemBlocks();
+        printMemBlocks(ANY);
         return;
     }//todo hacer el print de los bloques específicos
 
@@ -239,6 +275,8 @@ void allocate_help(){
 }
 
 void deallocate(char ** tokens, int token_number){
+    if(token_number > 0)
+        *tokens[0] = 2;
 
 }
 
@@ -334,7 +372,7 @@ void memdumplocal(uint8_t * addr, long long int size){
 void memdump(char ** tokens, int token_number){
 
     if(token_number == 0){
-        printMemBlocks();
+        printMemBlocks(ANY);
         return;
     }
 
