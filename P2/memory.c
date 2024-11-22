@@ -43,7 +43,7 @@ void mallocs_init(){
 void mallocs_exit(){
     for(int i = 0; i < list_length(blocks_list); i++){
         alloc a = list_get(blocks_list, i);
-        if(a->type != SHARED)
+        if(a->type != SHARED && a->type != MAPPED)
             free(a->addr);
         else
             printf("WARNING: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i", 1234);//todo add key
@@ -159,7 +159,7 @@ void allocateMap(char * name, char * perms){
     int protection=0;
     if (strlen(perms)<4) {
         if (strchr(perms,'r')!=NULL) protection|=PROT_READ;
-        if (strchr(perms,'w')!=NULL) protection|=PROT_WRITE;
+        if (strchr(perms,'w')!=NULL) protection|=PROT_WRITE | PROT_READ;
         if (strchr(perms,'x')!=NULL) protection|=PROT_EXEC;
     }
 
@@ -174,13 +174,19 @@ void allocateMap(char * name, char * perms){
     if ((p=mmap (NULL,s.st_size, protection,map,df,0))==MAP_FAILED)
         p = NULL;
 
-    /* Guardar en la lista    InsertarNodoMmap (&L,p, s.st_size,df,fichero); */
-    /* Gurdas en la lista de descriptores usados df, fichero*/
-
     if (p==NULL)
         perror ("Imposible mapear fichero");
     else{
         printf ("fichero %s mapeado en %p\n", name, p);
+
+        alloc a = malloc(sizeof(struct alloc));
+
+        a->addr = p;
+        a->size = s.st_size;
+        time(&a->time);
+        a->type = MAPPED;
+
+        list_append(blocks_list, a);
     }
 
 }
@@ -435,175 +441,6 @@ void readfile_help(){
     printf("empty:\tallocates the whole file on a new memory block\n");
     printf("addr:\tthe address of the memory to be written (can be decimal, hex(0x), bin(0b), oct(0o))\n");
     printf("size:\tthe number of bytes to be read (can be decimal, hex(0x), bin(0b), oct(0o)) (0 for everything untill end of block)\n");
-}
-
-typedef struct{
-    void * addr;
-    int top;
-    int size;
-}memstack;
-
-typedef struct{
-    memstack * stack;
-    int offset;
-    int size;
-}memstackvar;
-
-memstack initstack(void * addr, int size){
-    memstack s;
-    s.addr = addr;
-    s.size = size;
-    s.top = 0;
-
-    //limpiar pantalla
-    printf("\33[?1049h");
-    printf("\33[H");
-    printf("\33[0J");
-    memdumplocal(addr, size);
-
-    return s;
-}
-
-memstackvar getvar(memstack * s, int align, int size){
-    memstackvar v;
-    v.stack = s;
-
-    uintptr_t p = (uintptr_t)s->addr + s->top;
-
-    if(p % align){
-        int offset = align - (p % align);
-        p += offset;
-        s->top += offset;
-    }
-
-    v.offset = p - (uintptr_t)s->addr;
-
-    if(size < 0)
-        size = (s->size - s->top) / align * align;
-
-    s->top += size;
-    v.size = size;
-
-    return v;
-}
-
-void updatevar(memstack s, void * addr, int size){
-    int line = 0, column = 0, columnchar = 0;
-
-    intptr_t top = ((intptr_t)s.addr >> 4) - 1;
-    line = ((intptr_t)addr >> 4) - top;
-
-    column = 24 + 3 * ((intptr_t)addr & 0xf);
-    columnchar = 79 + ((intptr_t)addr & 0xf);
-
-    if(column >= 47){
-        column += 2;
-        columnchar++;
-    }
-
-    for(int i = 0; i < size; i++){
-
-        if(column >= 47 && column < 50){
-            column += 2;
-            columnchar++;
-        }else if(column >= 74){
-            column = 24;
-            columnchar = 79;
-            line++;
-        }
-
-        uint8_t val = ((uint8_t *)addr)[i];
-
-        printf("\33[%i;%iH", line, column);
-
-        printf("%02x", val);
-
-
-        printf("\33[%i;%iH", line, columnchar);
-
-        if(32 <= val && val < 127)
-            printf("%c", ((uint8_t *)addr)[i]);
-        else
-            printf(".");
-
-        column+= 3;
-        columnchar++;
-    }
-}
-
-void process(char ** tokens, int token_number){
-
-    if(token_number <= 1){
-        fprintf(stderr, "ERROR ON PARSING: ILLEGAL NUMBER OF ARGUMENTS\n");
-        return;
-    }
-
-    char * proc = tokens[0];
-    void * addr = (void *)interpretNumberFormat(tokens[1]);
-    int size = 0;
-
-    if(token_number > 2)
-        size = interpretNumberFormat(tokens[2]);
-
-    int memblock = allocatedAt(addr, size);
-
-    if(memblock == -1){
-        fprintf(stderr, "ERROR ON PARSING: ADDR ISN'T ALLOCATED OR SIZE IS TOO BIG\n");
-        return;
-    }
-
-    if(size == 0){
-        alloc a = list_get(blocks_list, memblock);
-        size = a->addr + a->size - (void *)addr;
-    }
-
-    memstack s = initstack(addr, size);
-    memstackvar stacki = getvar(&s, __alignof(int), sizeof(int));
-    memstackvar stackj = getvar(&s, __alignof(int), sizeof(int));
-    memstackvar stacknum = getvar(&s, __alignof(int), sizeof(int));
-    memstackvar stackarr = getvar(&s, __alignof(short int), -1);
-    int * i = stacki.offset + s.addr;
-    int * j = stackj.offset + s.addr;
-    int * num = stacknum.offset + s.addr;
-    short int * arr = stackarr.offset + s.addr;
-    int arr_size = stackarr.size / sizeof(*arr);
-
-    //ver tamaño mínimo
-    if(arr_size <= 0){
-        fprintf(stderr, "ERROR ON PROCESSING: SPACE ISN'T BIG ENOUGH\n");
-        return;
-    }
-
-    arr[0] = 2;
-    updatevar(s, &arr[0], sizeof(*arr));
-
-    for(*i = 1, *num = 3; *i < arr_size; (*i)++, (*num)++){
-        updatevar(s, i, sizeof(*i));
-        updatevar(s, num, sizeof(*num));
-        int prime = 1;
-        for(*j = *i - 1; *j >= 0; (*j)--){
-            updatevar(s, j, sizeof(*j));
-            if(!(*num % arr[*j])){
-                prime = 0;
-                break;
-            }
-        }
-        if(prime){
-            arr[*i] = *num;
-            updatevar(s, &arr[*i], sizeof(*arr));
-        }else{
-            (*i)--;
-            updatevar(s, i, sizeof(*i));
-        }
-    }
-    printf("\33[?1049l");
-    memdumplocal(addr, size);
-}
-void process_help(){
-    printf("\tprocess prime|newton|sort addr [size]\n");
-    printf("addr:\tthe address of the memory to be used (can be decimal, hex(0x), bin(0b), oct(0o))\n");
-    printf("empty:\tuses the full block\n");
-    printf("size:\tthe number of bytes to be used (can be decimal, hex(0x), bin(0b), oct(0o)) (0 for everything untill end of block)\n");
 }
 
 void memfill(char ** tokens, int token_number){

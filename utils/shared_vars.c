@@ -53,22 +53,26 @@ list pid_pages(int pid, list l){
     while (getline(&line, &size, maps_file) > 0) {
         page *curr;
         char           perms[8];
-        unsigned int   devmajor, devminor;
-        unsigned long  addr_start, addr_end, offset, inode;
+        unsigned long  addr_start, addr_end;
         int            name_start = 0;
         int            name_end = 0;
 
-        if (sscanf(line, "%lx-%lx %7s %lx %u:%u %lu %n%*[^\n]%n",&addr_start, &addr_end, perms, &offset, &devmajor, &devminor, &inode, &name_start, &name_end) < 7) {
+        if (sscanf(line, "%lx-%lx %7s",&addr_start, &addr_end, perms) < 3) {
             fclose(maps_file);
             free(line);
             errno = EIO;
             return NULL;
         }
 
+        for(name_start = name_end = 73; line[name_end] != '\n'; name_end++)
+            if(line[name_end] == '/')
+                name_start = name_end + 1;
+
+
         if (name_end <= name_start)
             name_start = name_end = 0;
 
-        curr = malloc(sizeof(page) + (size_t)(name_end - name_start) + 1);
+        curr = malloc(sizeof(page) + (size_t)(name_end - name_start + 1));
         if (!curr) {
             fclose(maps_file);
             free(line);
@@ -82,11 +86,8 @@ list pid_pages(int pid, list l){
 
         curr->start = (void *)addr_start;
         curr->length = addr_end - addr_start;
-        curr->offset = offset;
-        curr->device = makedev(devmajor, devminor);
-        curr->inode = inode;
 
-        curr->perms = 0U;
+        curr->perms = 0;
 
         if (strchr(perms, 'r'))
             curr->perms |= PAGE_R;
@@ -206,11 +207,6 @@ void files_init(){
     list_append(files, f3);
 }
 
-void shared_vars_init(){
-    pmap = list_init();
-    files_init();
-}
-
 void files_exit(){
     for(int i = 0; i < list_length(files); i++){
         file * f = list_get(files, i);
@@ -222,7 +218,12 @@ void files_exit(){
     list_free(files);
 }
 
-void sahred_vars_exit(){
+void shared_vars_init(){
+    pmap = list_init();
+    files_init();
+}
+
+void shared_vars_exit(){
     while(list_length(pmap)){
         free(list_pop(pmap));
     }

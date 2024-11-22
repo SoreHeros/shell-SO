@@ -58,7 +58,6 @@ command_entry commands[] =
                     { "allocate",  NORMAL,        allocate, allocate_help},
                     { "memdump",   NORMAL,        memdump,  memdump_help},
                     { "readfile",  NORMAL,        readfile, readfile_help},
-                    //{ "process",   NORMAL,        process,  process_help},
                     { "memfill",   NORMAL,        memfill,  memfill_help},
                     { "stack",     NORMAL,        stack,    stack_help},
                     { "pmap",      NORMAL,        pmap_command,     pmap_help},
@@ -190,7 +189,7 @@ void command_manager_exit(){
         free(list_get(historial, i));
     list_free(historial);
     free(commands_pointer);
-    sahred_vars_exit();
+    shared_vars_exit();
     mallocs_exit();
 }
 command_entry get_command(char * command_name){
