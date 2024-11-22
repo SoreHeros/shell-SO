@@ -8,57 +8,12 @@
 #include <fcntl.h>
 
 #include "../utils/lists.h"
+#include "../utils/shared_vars.h"
 #include "files.h"
 
-list open_files;
-typedef enum {READ = 0x1, WRITE = 0x2, BINARY = 0x4, }MODE;
-
-typedef struct{
-    char * name;
-    int fd;
-}file;
-
-
-
-
-void files_init(){
-    open_files = list_init();
-
-    file *f1 = malloc(sizeof(file));
-
-    f1->name = strdup("stdin");
-    f1->fd = stdin->_fileno;
-
-    list_append(open_files, f1);
-
-    file *f2 = malloc(sizeof(file));
-
-    f2->name = strdup("stdout");
-    f2->fd = stdout->_fileno;
-
-    list_append(open_files, f2);
-
-    file *f3 = malloc(sizeof(file));
-
-    f3->name = strdup("stderr");
-    f3->fd = stderr->_fileno;
-
-    list_append(open_files, f3);
-}
-void files_exit(){
-    for(int i = 0; i < list_length(open_files); i++){
-        file * f = list_get(open_files, i);
-        close(f->fd);
-        free(f->name);
-        free(f);
-    }
-
-    list_free(open_files);
-}
-
 void list_files(){
-    for(int i = 0; i < list_length(open_files); i++){
-        file * f = list_get(open_files, i);
+    for(int i = 0; i < list_length(files); i++){
+        file * f = list_get(files, i);
 
         printf("%3i: %30s ", f->fd, f->name);
 
@@ -125,7 +80,7 @@ void open_command(char ** tokens, int token_number){
     opened_file->name = strdup(tokens[0]);
 
     //list_append(open_files, opened_file);
-    list_add(open_files, opened_file->fd,opened_file);
+    list_add(files, opened_file->fd,opened_file);
 }
 void open_help(){
     printf("\topen [file] [cr|ap|ex|ro|rw|wo|tr] \n");
@@ -150,13 +105,13 @@ void close_command(char ** tokens, int token_number){
         return;
     }
 
-    for(int i = 3; i < list_length(open_files); i++){
-        file * f = list_get(open_files, i);
+    for(int i = 3; i < list_length(files); i++){
+        file * f = list_get(files, i);
         if(ds == f->fd){
             close(ds);
             free(f->name);
             free(f);
-            list_remove(open_files, i);
+            list_remove(files, i);
             i--;
         }
     }
@@ -198,8 +153,8 @@ void dup_command(char ** tokens, int token_number){
     file  * f = malloc(sizeof(file));
     f->fd = newfd;
 
-    for(int i = 0; i < list_length(open_files); i++){
-        file * aux = list_get(open_files, i);
+    for(int i = 0; i < list_length(files); i++){
+        file * aux = list_get(files, i);
         if(aux->fd == oldfd) {
             //copiar el string antiguo con el (dup)
             char dup[] = "(dup)";
@@ -211,7 +166,7 @@ void dup_command(char ** tokens, int token_number){
             break;
         }
     }
-    list_add(open_files, f->fd, f);
+    list_add(files, f->fd, f);
 }
 void dup_help(){
     printf("\tdup [descriptor]\n");

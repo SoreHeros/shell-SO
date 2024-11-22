@@ -5,11 +5,6 @@
 #ifndef SHELL_SO_FILES_H
 #define SHELL_SO_FILES_H
 
-void files_init();
-void files_exit();
-
-
-
 void open_command(char **, int);
 void open_help();
 void close_command(char **, int);

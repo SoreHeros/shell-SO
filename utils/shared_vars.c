@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/sysmacros.h>
 
 list blocks;
@@ -180,12 +181,51 @@ void print_colored_pointer(list l, void * addr){
     printf("%s0x%016lx\33[0m",code, (intptr_t)addr);
 }
 
+void files_init(){
+    files = list_init();
+
+    file *f1 = malloc(sizeof(file));
+
+    f1->name = strdup("stdin");
+    f1->fd = stdin->_fileno;
+
+    list_append(files, f1);
+
+    file *f2 = malloc(sizeof(file));
+
+    f2->name = strdup("stdout");
+    f2->fd = stdout->_fileno;
+
+    list_append(files, f2);
+
+    file *f3 = malloc(sizeof(file));
+
+    f3->name = strdup("stderr");
+    f3->fd = stderr->_fileno;
+
+    list_append(files, f3);
+}
+
 void shared_vars_init(){
     pmap = list_init();
+    files_init();
 }
+
+void files_exit(){
+    for(int i = 0; i < list_length(files); i++){
+        file * f = list_get(files, i);
+        close(f->fd);
+        free(f->name);
+        free(f);
+    }
+
+    list_free(files);
+}
+
 void sahred_vars_exit(){
     while(list_length(pmap)){
         free(list_pop(pmap));
     }
     list_free(pmap);
+    files_exit();
 }

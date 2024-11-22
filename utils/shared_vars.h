@@ -31,6 +31,13 @@ typedef struct{
     char                     name[];
 }page;
 
+typedef enum {READ = 0x1, WRITE = 0x2, BINARY = 0x4, }MODE;
+
+typedef struct{
+    int fd;
+    char * name;
+}file;
+
 extern list blocks;
 extern list files;
 extern list history;

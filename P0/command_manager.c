@@ -18,6 +18,7 @@
 #include "../P1/dirs.h"
 #include "../P2/memory.h"
 #include "../utils/lists.h"
+#include "../utils/shared_vars.h"
 
 void help(char **, int);
 void help_help();
@@ -181,7 +182,7 @@ void command_manager_init(){
     for(int i = 0; i < commands_len; i++)
         commands_pointer[i] = &commands[i];
     qsort(commands_pointer, commands_len, sizeof(command_entry *), command_comparator);
-    files_init();
+    shared_vars_init();
     mallocs_init();
 }
 void command_manager_exit(){
@@ -189,7 +190,7 @@ void command_manager_exit(){
         free(list_get(historial, i));
     list_free(historial);
     free(commands_pointer);
-    files_exit();
+    sahred_vars_exit();
     mallocs_exit();
 }
 command_entry get_command(char * command_name){
