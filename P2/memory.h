@@ -25,8 +25,8 @@ void print(char **, int);
 void print_help();
 void deallocate(char **, int);
 void deallocate_help();
-
-//todo
+void recurse(char **, int);
+void recurse_help();
 void memory(char **, int);
 void memory_help();
 void writefile(char **, int);
@@ -35,7 +35,5 @@ void read_command(char **, int);
 void read_help();
 void write_command(char **, int);
 void write_help();
-void recurse(char **, int);
-void recurse_help();
 
 #endif //MALLOCS_H

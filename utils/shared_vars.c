@@ -18,6 +18,10 @@ list files;
 list history;
 list pmap;
 
+int var1;
+int var2;
+int var3;
+
 list pid_pages(int pid, list l){
 
     if(l == NULL){
@@ -51,11 +55,11 @@ list pid_pages(int pid, list l){
         return NULL;
 
     while (getline(&line, &size, maps_file) > 0) {
-        page *curr;
-        char           perms[8];
-        unsigned long  addr_start, addr_end;
-        int            name_start = 0;
-        int            name_end = 0;
+        page           *curr;
+        char            perms[8];
+        unsigned long   addr_start, addr_end;
+        int             name_start = 0;
+        int             name_end = 0;
 
         if (sscanf(line, "%lx-%lx %7s",&addr_start, &addr_end, perms) < 3) {
             fclose(maps_file);
@@ -64,13 +68,18 @@ list pid_pages(int pid, list l){
             return NULL;
         }
 
-        for(name_start = name_end = 73; line[name_end] != '\n'; name_end++)
-            if(line[name_end] == '/')
-                name_start = name_end + 1;
-
-
-        if (name_end <= name_start)
+        if(size >= 74){
+            for(name_start = name_end = 73; line[name_end] != '\n' && line[name_end] != '\0'; name_end++)
+                if(line[name_end] == '/')
+                    name_start = name_end + 1;
+        }else
             name_start = name_end = 0;
+
+        if (name_end <= name_start){
+            name_start = 0;
+            name_end = 6;
+            strcpy(line, "[anon]");
+        }
 
         curr = malloc(sizeof(page) + (size_t)(name_end - name_start + 1));
         if (!curr) {
@@ -103,6 +112,7 @@ list pid_pages(int pid, list l){
             curr->perms |= PAGE_STACK;
 
         list_append(l, curr);
+        memset(line, 0, size);//reset buffer
     }
 
     free(line);
@@ -208,9 +218,10 @@ void files_init(){
 }
 
 void files_exit(){
-    for(int i = 0; i < list_length(files); i++){
+    for(int i = 0; i < list_length(files); i++){//empieza en 3 para saltarse el df 0, 1, y 2
         file * f = list_get(files, i);
-        close(f->fd);
+        if(3 <= i)
+            close(f->fd);
         free(f->name);
         free(f);
     }

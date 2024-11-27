@@ -32,7 +32,7 @@ void not_found_help();
 command_entry nf =     {"not found", NOTFOUND, not_found, not_found_help};
 
 command_entry commands[] =
-        {
+        {                   //"123456789012"
                      {"quit",      EXIT,          quit,     quit_help},
                      {"exit",      EXIT,          exit_command,      exit_help},
                      {"bye",       EXIT,          bye,      bye_help},
@@ -54,7 +54,6 @@ command_entry commands[] =
                     { "cwd",       NORMAL,        cwd,      cwd_help},
                     { "listfile",  NORMAL,        listfile, listfile_help},
                     { "listdir",   NORMAL,        listdir,  listdir_help},
-                    //{ "reclist",   NORMAL,        reclist,  reclist_help},
                     { "allocate",  NORMAL,        allocate, allocate_help},
                     { "memdump",   NORMAL,        memdump,  memdump_help},
                     { "readfile",  NORMAL,        readfile, readfile_help},
@@ -62,6 +61,12 @@ command_entry commands[] =
                     { "stack",     NORMAL,        stack,    stack_help},
                     { "pmap",      NORMAL,        pmap_command,     pmap_help},
                     { "print",     NORMAL,        print,    print_help},
+                    { "deallocate",NORMAL,        deallocate,    deallocate_help},
+                    { "recurse",   NORMAL,        recurse,    recurse_help},
+                    { "memory",    NORMAL,        memory,    memory_help},
+                    { "writefile",    NORMAL,        writefile,    writefile_help},
+                    { "read",    NORMAL,        read_command,    read_help},
+                    { "write",    NORMAL,        write_command,    write_help},
         };
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);

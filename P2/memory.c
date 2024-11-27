@@ -13,11 +13,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 #include <fcntl.h>
 
 #include <sys/types.h>
-#include <sys/sysmacros.h>
 #include <unistd.h>
 
 #include <sys/shm.h>
@@ -31,10 +29,12 @@ typedef enum{
 typedef struct alloc{
     void * addr;
     time_t time;
-    unsigned int size;
+    size_t size;
     alloc_type type;
-    int key;
-    char name[];//todo union
+    union{
+        int key;
+        char name[0];//0 para engañar al compilador con que es de tamaño variable
+    };
 } * alloc;
 
 list blocks_list;
@@ -45,10 +45,16 @@ void mallocs_init(){
 void mallocs_exit(){
     for(int i = 0; i < list_length(blocks_list); i++){
         alloc a = list_get(blocks_list, i);
-        if(a->type != SHARED && a->type != MAPPED)
+        switch (a->type){
+        case MALLOC:
             free(a->addr);
-        else
-            printf("WARNING: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i", a->key);//todo add key
+            break;
+        case SHARED:
+            printf("WARNING: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i\n", a->key);
+            break;
+        default:
+            break;
+        }
         free(a);
     }
     list_free(blocks_list);
@@ -69,17 +75,16 @@ long long int interpretNumberFormat(char * s){
     return strtol(s, NULL, 10);
 }
 
-void printMemBlocks(alloc_type t){//todo add block type
+void printMemBlocks(alloc_type t){
     int len = list_length(blocks_list);
 
     int printed = 0;
     for(int i = 0; i < len; i++){
-        //todo print mode
         alloc a = list_get(blocks_list, i);
         if(a->type & t){
             struct tm * time = localtime(&a->time);
             printf("%04i/%02i/%02i-%02i:%02i:%02i\t", time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min, time->tm_sec);
-            printf("0x%016lx 0x%08x(%10u) ", (uintptr_t) a->addr, a->size, a->size);
+            printf("0x%016lx 0x%08lx(%10lu) ", (uintptr_t) a->addr, a->size, a->size);
             switch (a->type){
                 case ANY:
                     printf("ANY    ");
@@ -88,10 +93,10 @@ void printMemBlocks(alloc_type t){//todo add block type
                     printf("MALLOC ");
                     break;
                 case SHARED:
-                    printf("SHARED KEY:%i", a->key);
+                    printf("SHARED KEY:  %i", a->key);
                     break;
                 case MAPPED:
-                    printf("MAPPED NAME:%s", a->name);
+                    printf("MAPPED NAME: %s", a->name);
                     break;
             }
             printf("\n");
@@ -154,7 +159,7 @@ void allocateMalloc(unsigned size){
 void createShared(int key, long size){
     int id = shmget(key, size, 0777 | IPC_CREAT | IPC_EXCL);
     if(id == -1){
-        perror("ERROR ON CREATING SHARED MEMORY:");
+        perror("ERROR ON CREATING SHARED MEMORY");
         return;
     }
     struct shmid_ds s;
@@ -167,14 +172,16 @@ void createShared(int key, long size){
     a->size = size;
     a->time = s.shm_atime;
     a->type = SHARED;
+    a->key  = key;
 
     list_append(blocks_list, a);
+    printf("allocated %li bytes on %p for shared memory with key %i\n", a->size, a->addr, a->key);
 }
 
 void linkShared(int key){
     int id = shmget(key, 0, 0777);
     if(id == -1){
-        perror("ERROR ON LINKING SHARED MEMORY:");
+        perror("ERROR ON LINKING SHARED MEMORY");
         return;
     }
     struct shmid_ds s;
@@ -187,8 +194,10 @@ void linkShared(int key){
     a->size = s.shm_segsz;
     a->time = s.shm_atime;
     a->type = SHARED;
+    a->key  = key;
 
     list_append(blocks_list, a);
+    printf("linked %li bytes on %p for shared memory with key %i\n", a->size, a->addr, a->key);
 }
 
 void allocateMap(char * name, char * perms){
@@ -215,23 +224,37 @@ void allocateMap(char * name, char * perms){
     else{
         printf ("fichero %s mapeado en %p\n", name, p);
 
-        alloc a = malloc(sizeof(struct alloc));
+        alloc a = malloc(sizeof(struct alloc) + strlen(name) + 1);
 
         a->addr = p;
         a->size = s.st_size;
         time(&a->time);
         a->type = MAPPED;
+        strcpy(a->name, name);
 
         list_append(blocks_list, a);
+        close(df);
     }
 
 }
 
-void allocate(char ** tokens, int token_number){//todo allocate -mmap
+void allocate(char ** tokens, int token_number){
     if(token_number == 0){
         printMemBlocks(ANY);
         return;
-    }//todo hacer el print de los bloques específicos
+    }
+
+    if(token_number == 1){
+        if(!strcmp(tokens[0], "-malloc"))
+            printMemBlocks(MALLOC);
+        else if(!strcmp(tokens[0], "-mmap"))
+            printMemBlocks(MAPPED);
+        else if(!strcmp(tokens[0], "-shared") || !strcmp(tokens[0], "-createshared"))
+            printMemBlocks(SHARED);
+        else
+            fprintf(stderr ,"ERROR ON PARSING: %s isn't a valid flag", tokens[0]);
+        return;
+    }
 
     if(!strcmp(tokens[0], "-malloc")){
         if(token_number < 2){
@@ -258,7 +281,7 @@ void allocate(char ** tokens, int token_number){//todo allocate -mmap
         }
         linkShared(interpretNumberFormat(tokens[1]));
     }else{
-        fprintf(stderr, "ERROR ON PARSING: %s isn't a valid flag\n", tokens[1]);
+        fprintf(stderr, "ERROR ON PARSING: %s isn't a valid flag\n", tokens[0]);
     }
 }
 void allocate_help(){
@@ -274,10 +297,108 @@ void allocate_help(){
     printf("-shared:\tattaches the memory block with the specified key\n");
 }
 
-void deallocate(char ** tokens, int token_number){
-    if(token_number > 0)
-        *tokens[0] = 2;
+void deallocateAddr(void * addr){
+    alloc a = list_get(blocks_list, allocatedAt(addr, 0));
+    switch(a->type){
+    case MALLOC:
+        printf("freeing mallocd memory at %p of size %li\n", a->addr, a->size);
+        free(a->addr);
+        break;
+    case MAPPED:
+        printf("unmapping file %s at %p\n", a->name, a->addr);
+        munmap(a->addr, a->size);
+        break;
+    case SHARED:
+        printf("detaching shared memory with key %i at %p\n", a->key, a->addr);
+        shmdt(a->addr);
+        break;
+    default:
+        break;
+    }
+}
 
+void deallocate(char ** tokens, int token_number){
+    if(token_number == 0){
+        printMemBlocks(ANY);
+        return;
+    }
+
+    if(token_number == 1){
+        int pos = allocatedAt((void *)interpretNumberFormat(tokens[0]), 0);
+        if(pos < 0){
+            fprintf(stderr,"ERROR ON FREEING: no allocated block on 0x%016lx exists\n", (unsigned long)interpretNumberFormat(tokens[0]));
+            return;
+        }
+
+        alloc a = list_get(blocks_list, pos);
+        deallocateAddr(a->addr);
+
+        list_remove(blocks_list, pos);
+        free(a);
+
+        return;
+    }
+
+    if(!strcmp(tokens[0], "-malloc")){
+        if(token_number < 2){
+            fprintf(stderr, "ERROR ON PARSING: -malloc must have a numerical argument after it\n");
+            return;
+        }
+        unsigned long size = interpretNumberFormat(tokens[1]);
+        for(int i = 0; i < list_length(blocks_list); i++){
+            alloc a = list_get(blocks_list, i);
+            if(a->size == size && a->type == MALLOC){
+                deallocateAddr(a->addr);
+                list_remove(blocks_list, i);
+                free(a);
+                return;;
+            }
+        }
+        fprintf(stderr,"ERROR ON FREEING: no mallocd block of size %li exists\n", size);
+    }else if(!strcmp(tokens[0], "-mmap")){
+        if(token_number < 2){
+            fprintf(stderr, "ERROR ON PARSING: -mmap must have a file name\n");
+            return;
+        }
+        char * name = tokens[1];
+        for(int i = 0; i < list_length(blocks_list); i++){
+            alloc a = list_get(blocks_list, i);
+            if(a->type == MAPPED && !strcmp(a->name, name)){
+                deallocateAddr(a->addr);
+                list_remove(blocks_list, i);
+                free(a);
+                return;;
+            }
+        }
+        fprintf(stderr,"ERROR ON FREEING: no mapped file with name %s exists\n", name);
+    }else if(!strcmp(tokens[0], "-delkey")){
+        if(token_number < 2){
+            fprintf(stderr, "ERROR ON PARSING: -delkey must have a key\n");
+            return;
+        }
+        int key = interpretNumberFormat(tokens[1]);
+        int ret = shmctl(shmget(key, 0, 0), IPC_RMID, NULL);
+        if(ret == -1)
+            perror("ERROR ON DELETING KEY");
+    }else if(!strcmp(tokens[0], "-shared")){
+        if(token_number < 2){
+            fprintf(stderr, "ERROR ON PARSING: -shared must have a key it\n");
+            return;
+        }
+        int key = interpretNumberFormat(tokens[1]);
+        for(int i = 0; i < list_length(blocks_list); i++){
+            alloc a = list_get(blocks_list, i);
+            if(a->type == SHARED && a->key == key){
+                deallocateAddr(a->addr);
+                list_remove(blocks_list, i);
+                free(a);
+                return;;
+            }
+        }
+        fprintf(stderr,"ERROR ON FREEING: no linked shared memory with key %i exists\n", key);
+    }else{
+        fprintf(stderr, "ERROR ON PARSING: %s isn't a valid flag\n", tokens[0]);
+    }
 }
 
 void deallocate_help(){
@@ -314,7 +435,7 @@ void memdumplocal(uint8_t * addr, long long int size){
                 isRep = 1;
                 printf("[...]\n");
             }
-            continue;//todo meter flag
+            continue;
         }
         print_colored_pointer(l, (void *)p);
         printf("     ");
@@ -465,6 +586,11 @@ void readfile(char ** tokens, int token_number){
 
     for(int i = 0; i < size; i++){
         addr[i] = fgetc(f);
+        if(feof(f)){
+            addr[i] = '\0';
+            printf("EOF reached at %i bytes\n", i);
+            break;
+        }
     }
 
     addr[size - 1] = '\0';
@@ -512,8 +638,7 @@ void memfill(char ** tokens, int token_number){
         size = a->addr + a->size - (void *)addr;
     }
 
-    for(int i = 0; i < size; i++)
-        addr[i] = value;
+    memset(addr, value, size);
 }
 void memfill_help(){
     printf("\tmemfill addr [size] char|number\n");
@@ -550,9 +675,6 @@ void stack_help(){
     printf("sup:\tthe number of bytes to be displayed above the current stack pointer (can be decimal, hex(0x), bin(0b), oct(0o))\n");
 }
 
-//updates the list l with the current process pages, if l is null it will create a new list, returns the process page list
-
-
 void pmap_command(char **, int){
     list l = get_pmap();
 
@@ -584,4 +706,240 @@ void print_help(){
     printf("addr:\tmem dir to print\n");
     printf("empty:\teverything untill '\\0'\n");
     printf("size:\tignores '\\0' and prints size number of characters\n");
+}
+
+void localRecurse(int left){
+    if(left < 0)
+        return;
+    static int recursions = 0;
+    static uint8_t staticArr[2048];
+    uint8_t autoArr[2048];
+
+    recursions++;
+    if(recursions >= 2000){
+        fprintf(stderr,"ERROR ON RECURSE: too many recursions\n");
+        return;
+    }
+    printf("recursions left:%5i(%p) array %p estatico %p\n", left, &left, &autoArr, &staticArr);
+    localRecurse(left - 1);
+    recursions = 0;
+}
+
+void recurse(char ** tokens, int token_number){
+    int size = 25;
+    if(token_number > 0)
+        size = interpretNumberFormat(tokens[0]);
+    localRecurse(size);
+}
+void recurse_help(){
+    printf("\trecurse n\n");
+    printf("n:\tnumber of times to recuse\n");
+}
+
+void memory(char ** tokens, int token_number){
+    struct{
+        char funcs;
+        char vars;
+        char blocks;
+        char pmap;
+    }flags = {0};
+
+    for(int i = 0; i < token_number; i++){
+        if(!strcmp(tokens[i], "-funcs"))
+            flags.funcs = 1;
+        else if(!strcmp(tokens[i], "-blocks"))
+            flags.blocks = 1;
+        else if(!strcmp(tokens[i], "-vars"))
+            flags.vars = 1;
+        else if(!strcmp(tokens[i], "-pmap"))
+            flags.pmap = 1;
+        else if(!strcmp(tokens[i], "-all")){
+            flags.vars = 1;
+            flags.blocks = 1;
+            flags.funcs = 1;
+        }
+    }
+
+    if(!(flags.blocks || flags.funcs || flags.pmap || flags.vars)){
+        flags.blocks = 1;
+        flags.funcs = 1;
+        flags.vars = 1;
+    }
+
+    if(flags.funcs){
+        printf("\nfunciones del programa:\n");
+        printf("funcion memory: \t%p\n", memory);
+        printf("funcion recurse:\t%p\n", recurse);
+        printf("funcion print:  \t%p\n", print);
+
+        printf("\nfunciones de librerias:\n");
+        printf("funcion printf: \t%p\n", printf);
+        printf("funcion strcpy: \t%p\n", strcpy);
+        printf("funcion time:   \t%p\n", time);
+    }
+
+    if(flags.vars){
+        printf("\nvariables:\n");
+        printf("External:            \t%16p, %16p, %16p\n", &var1, &var2, &var3);
+        printf("External initialized:\t%16p, %16p, %16p\n", &blocks, &files, &history);
+
+        static int var1, var2, var3;
+        printf("Static:              \t%16p, %16p, %16p\n", &var1, &var2, &var3);
+
+
+        static int var4 = 1, var5 = 2, var6 = 3;
+        printf("Static initialized:  \t%16p, %16p, %16p\n", &var4, &var5, &var6);
+
+        int var7 = 1;
+        float var8 = 1;
+        char var9 = '1';
+        printf("automatic:           \t%16p, %16p, %16p\n", &var7, &var8, &var9);
+    }
+
+    if(flags.blocks){
+        printf("\nmemory blocks:\n");
+        printMemBlocks(ANY);
+    }
+
+    if(flags.pmap){
+        printf("\nprocess map:\n");
+        pmap_command(NULL, 0);
+    }
+}
+void memory_help(){
+    printf("\tmemory -funcs|-vars|-blocks|-all|-pmap ...\n");
+    printf("-funcs:\tprints the addresses of 3 program and 3 library functions\n");
+    printf("-vars:\tprints the addresses of 3 external, 3 external initialized, 3 static, 3 static initialized and 3 automatic variables\n");
+    printf("-blocks:\tprints the addresses of all allocated blocks\n");
+    printf("-all:\tsame ass -funcs -vars -blocks\n");
+    printf("-pmap:\tsame as calling pmap\n");
+}
+
+void writefile(char ** tokens, int token_number){
+    if(token_number < 3){
+        fprintf(stderr, "ERROR ON PARSING: writefile needs 3 argumens\n");
+        return;
+    }
+
+    FILE * f = fopen(tokens[0], "wb");
+    if(f == NULL){
+        perror("ERROR ON OPENING FILE");
+        return;
+    }
+
+    uint8_t * addr = (void *)interpretNumberFormat(tokens[1]);
+    size_t size = interpretNumberFormat(tokens[2]);
+
+    int pos = allocatedAt(addr, size);
+    if(pos < 0){
+        fprintf(stderr, "ERROR ON PARSING: addr or size is too big or isnt allocated\n");
+        fclose(f);
+        return;
+    }
+
+    fwrite(addr, 1, size, f);
+    fclose(f);
+}
+void writefile_help(){
+    printf("\twritefile file addr size\n");
+    printf("file:\tname of the file to write\n");
+    printf("addr:\taddress to read from\n");
+    printf("size:\tnº of bytes to read\n");
+}
+
+void write_command(char ** tokens, int token_number){
+    if(token_number < 3){
+        fprintf(stderr, "ERROR ON PARSING: writefile needs 3 argumens\n");
+        return;
+    }
+
+    FILE * f = fdopen(interpretNumberFormat(tokens[0]), "wb");
+    if(f == NULL){
+        perror("ERROR ON OPENING FILE");
+        return;
+    }
+
+    uint8_t * addr = (void *)interpretNumberFormat(tokens[1]);
+    size_t size = interpretNumberFormat(tokens[2]);
+
+    int pos = allocatedAt(addr, size);
+    if(pos < 0){
+        fprintf(stderr, "ERROR ON PARSING: addr or size is too big or isnt allocated\n");
+        fclose(f);
+        return;
+    }
+    fwrite(addr, 1, size, f);
+    fclose(f);
+}
+void write_help(){
+    printf("\twrite df addr size\n");
+    printf("df:\tfile descriptor of the file to write\n");
+    printf("addr:\taddress to read from\n");
+    printf("size:\tnº of bytes to read\n");
+}
+
+void read_command(char ** tokens, int token_number){
+
+    if(token_number == 0){
+        fprintf(stderr, "ERROR ON PARSING: ILLEGAL NUMBER OF ARGUMENTS\n");
+        return;
+    }
+
+    FILE * f = fdopen(interpretNumberFormat(tokens[0]), "rb");
+    if(f == NULL){
+        perror("ERROR ON OPENING FILE");
+        return;
+    }
+
+    uint8_t * addr;
+    int size;
+
+    if(token_number == 1){
+        //create block of file size
+        fseek(f, 0, SEEK_END);
+        size = ftell(f) + 1;//+1 for \0
+        fseek(f, 0, SEEK_SET);
+        allocateMalloc(size);
+        addr = ((alloc)list_get(blocks_list, list_length(blocks_list) - 1))->addr;
+    }else{
+        //fill asigned
+        addr = (uint8_t *)interpretNumberFormat(tokens[1]);
+        if(token_number > 2){
+            size = interpretNumberFormat(tokens[2]);
+        }else{
+            size = 0;
+        }
+        int aux;
+        if((aux = allocatedAt(addr, size)) == -1){
+            fprintf(stderr, "ERROR ON PARSING: ADDR ISN'T ALLOCATED OR SIZE IS TOO BIG\n");
+            fclose(f);
+            return;
+        }
+        if(size == 0){
+            alloc a = list_get(blocks_list, aux);
+            size = a->addr + a->size - (void *)addr;
+        }
+    }
+
+    for(int i = 0; i < size; i++){
+        addr[i] = fgetc(f);
+        if(feof(f)){
+            addr[i] = '\0';
+            printf("EOF reached at %i bytes\n", i);
+            break;
+        }
+    }
+
+    addr[size - 1] = '\0';
+
+    printf("%i bytes written to %p\n", size, addr);
+
+    fclose(f);
+}
+void read_help(){
+    printf("\tread df [addr [size]]\n");
+    printf("df:\tfile descriptor of the file to be read\n");
+    printf("empty:\tallocates the whole file on a new memory block\n");
+    printf("addr:\tthe address of the memory to be written (can be decimal, hex(0x), bin(0b), oct(0o))\n");
+    printf("size:\tthe number of bytes to be read (can be decimal, hex(0x), bin(0b), oct(0o)) (0 for everything untill end of block)\n");
 }
