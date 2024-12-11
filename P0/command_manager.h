@@ -10,8 +10,6 @@ typedef enum {EXIT, NORMAL, NOTFOUND}command_directive;
 #define INPUT_BUFFER_SIZE 1024
 #define PROMPT "terminal:"
 
-//un comit
-
 typedef struct{
     char name[12];
     command_directive code;
