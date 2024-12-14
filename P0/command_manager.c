@@ -17,6 +17,7 @@
 #include "files.h"
 #include "../P1/dirs.h"
 #include "../P2/memory.h"
+#include "../P3/process.h"
 #include "../utils/lists.h"
 #include "../utils/shared_vars.h"
 
@@ -67,6 +68,9 @@ command_entry commands[] =
                     { "writefile",    NORMAL,        writefile,    writefile_help},
                     { "read",    NORMAL,        read_command,    read_help},
                     { "write",    NORMAL,        write_command,    write_help},
+                    { "getuid",    NORMAL,        getuid_command,    getuid_help},
+                    { "setuid",    NORMAL,        setuid_command,    setuid_help},
+                    { "showvar",    NORMAL,        showvar,    showvar_help},
         };
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);

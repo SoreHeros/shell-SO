@@ -43,6 +43,8 @@ extern int var1;
 extern int var2;
 extern int var3;
 
+extern char ** arg3;
+
 extern list get_pmap();
 void print_colored_pointer(list pmap, void * addr);
 extern char * get_page_perms(unsigned char perms);

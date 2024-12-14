@@ -8,6 +8,7 @@
 #include <termio.h>
 
 #include "P0/command_manager.h"
+#include "utils/shared_vars.h"
 
 struct termios old_tio;
 
@@ -24,8 +25,9 @@ void sig_handler(int sig){
     }
 }
 
-int main(){
+int main(int, char **, char ** mainEnv){
     //init
+    arg3 = mainEnv; //set shared env
     /* get the terminal settings for stdin */
     tcgetattr(0,&old_tio);//ajustes para devolver al parar la señal
     srand(time(NULL));

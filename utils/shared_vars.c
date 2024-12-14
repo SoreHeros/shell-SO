@@ -22,6 +22,8 @@ int var1;
 int var2;
 int var3;
 
+char ** arg3;
+
 list pid_pages(int pid, list l){
 
     if(l == NULL){

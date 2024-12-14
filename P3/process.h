@@ -5,17 +5,19 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
-void getuid(char **, int);
+void getuid_command(char **, int);
 void getuid_help();
-void setuid(char **, int);
+void setuid_command(char **, int);
 void setuid_help();
 void showvar(char **, int);
 void showvar_help();
+void changevar(char **, int);
+void changevar_help();
 void subsvar(char **, int);
 void subsvar_help();
-void environ(char **, int);
+void environ_command(char **, int);
 void environ_help();
-void fork(char **, int);
+void fork_command(char **, int);
 void fork_help();
 void search(char **, int);
 void search_help();
