@@ -14,6 +14,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 
 #include "../P2/memory.h"
 #include "../utils/shared_vars.h"
@@ -561,8 +563,82 @@ void fork_help(){
 }
 
 
-void search_command(char **, int){
 
+void search_command(char ** tokens, int token_number){
+	if(token_number < 1){
+		if(list_length(search)){
+			for(int i = 0; i < list_length(search); i++)
+				printf("%s\n", (char *)list_get(search, i));
+		}else{
+			printf("Search list is empty\n");
+		}
+		return;
+	}
+
+	if(!strcmp(tokens[0], "-add")){
+		if(token_number < 2){
+			fprintf(stderr, "ERROR ON PARSING: -add must have 2 arguments\n");
+			return;
+		}
+
+		if(list_search(search, tokens[1], (int (*)(const void *,const void *))strcmp) != -1){
+			fprintf(stderr, "ERROR ON ADDING: %s already exists\n", tokens[1]);
+			return;
+		}
+
+		if(tokens[1][0] != '/'){
+			fprintf(stderr, "ERROR ON ADDING: %s isn't an absolute path\n", tokens[1]);
+			return;
+		}
+
+		list_append(search, strdup(tokens[1]));
+
+	}else if(!strcmp(tokens[0], "-del")){
+		if(token_number < 2){
+			fprintf(stderr, "ERROR ON PARSING: -del must have 2 arguments\n");
+			return;
+		}
+
+		int pos;
+
+		if((pos = list_search(search, tokens[1], (int (*)(const void *,const void *))strcmp)) == -1){
+			fprintf(stderr, "ERROR ON ADDING: %s doesen't exist\n", tokens[1]);
+			return;
+		}
+
+		free(list_get(search, pos));
+		list_remove(search, pos);
+
+	}else if(!strcmp(tokens[0], "-clear")){
+		while (list_length(search))
+			free(list_pop(search));
+	}else if(!strcmp(tokens[0], "-path")){
+		int added = 0;
+
+		char * path = strdup(getenv("PATH"));
+
+		char * dirs[256] = {NULL};
+
+		int len = 1;
+
+		dirs[0] = strtok(path, ":");
+
+		while (len < 256 && (dirs[len] = strtok(NULL, ":")) != NULL)
+			len++;
+
+		for(int i = 0; i < len; i++){
+			if(list_search(search, dirs[i], (int (*)(const void *,const void *))strcmp) == -1){
+				added++;
+				list_append(search, strdup(dirs[i]));
+			}
+		}
+
+		free(path);
+
+		printf("Added to search %i elements from PATH\n", added);
+	}else{
+		fprintf(stderr, "ERROR ON PARSING: %s isn't a valid flag\n", tokens[0]);
+	}
 }
 void search_help(){
     printf("\tsearch [-add dir|-del dir|-clear|-path]\n");
@@ -574,14 +650,13 @@ void search_help(){
     printf("-path:\tadds the dirs in PATH to the search list\n");
 }
 
-//returns an array of size 3, 0 is the path, 1 is args (NULL ended), 2 is enviroment (NULL ended),
 typedef struct{
 	char * path;
 	char * args[256];
 	char * env[256];
 }ExecInput;
 ExecInput processExecInput(char ** tokens, int token_number){
-	ExecInput ret = {0};
+	ExecInput ret = {NULL};
 	int count = 0;
 	while(tokens[count] != NULL && getenv(tokens[count]) != NULL)
 		count++;
@@ -589,10 +664,21 @@ ExecInput processExecInput(char ** tokens, int token_number){
 	for(int i = 0; i < count; i++)
 		ret.env[i] = tokens[i];
 
-	ret.path = tokens[count];
+	if(!access(tokens[count], F_OK))
+		ret.path = tokens[count];
+	else for(int i = 0; i < list_length(search); i++){
+		static char * path = NULL;
+		asprintf(&path, "%s/%s", (char *) list_get(search, i), tokens[count]);
+		if(!access(path, F_OK)){
+			ret.path = path;
+			break;
+		}
+	}
 
-	for(int i = count + 1; i < token_number; i++)
-		ret.args[i - count - 1] = tokens[i];
+	ret.args[0] = ret.path;
+
+	for(int i = count + 1, j = 1; i < token_number; i++, j++)
+		ret.args[j] = tokens[i];
 
 	return ret;
 }
@@ -607,17 +693,13 @@ void exec(char ** tokens, int token_number){
 
 	ExecInput input = processExecInput(tokens, token_number);
 
-	printf("exec path: %s\n", input.path);
-
-	printf("args:");
-	for(int i = 0; input.args[i] != NULL; i++)
-		printf(" %s", input.args[i]);
-	printf("\n");
-
-	printf("env:");
-	for(int i = 0; input.env[i] != NULL; i++)
-		printf(" %s", input.env[i]);
-	printf("\n");
+	if(input.env[0] != NULL){
+		if(execve(input.path, input.args, input.env))
+			perror("ERROR ON EXECUTE");
+	}else{
+		if(execv(input.path, input.args))
+			perror("ERROR ON EXECUTE");
+	}
 }
 void exec_help(){
     printf("\texec [varName [...]] execName [arg [...]]\n");
@@ -628,8 +710,18 @@ void exec_help(){
 }
 
 
-void execpri(char **, int){
+void execpri(char ** tokens, int token_number){
+	if(token_number < 2){
+		fprintf(stderr, "ERROR ON PARSING: must have at least 2 argument\n");
+		return;
+	}
 
+    if(setpriority(PRIO_PROCESS,getpid(),atoi(tokens[0]))==-1 && errno){
+    	perror("ERROR ON SETTING PRIORITY");
+    	return;
+    }
+
+	exec(&tokens[1], token_number - 1);
 }
 void execpri_help(){
 	printf("\texecpri prio [varName [...]] execName [arg [...]]\n");
@@ -641,8 +733,15 @@ void execpri_help(){
 }
 
 
-void fg(char **, int){
-
+void fg(char ** tokens, int token_number){
+	pid_t son;
+	if(!((son=fork()))){
+		exec(tokens, token_number);//todo add to process list
+		exit(-1);
+	}else if(son != -1)
+		waitpid(son, NULL, 0);
+	else
+		perror("ERROR ON FORKING");
 }
 void fg_help(){
 	printf("\tfg [varName [...]] execName [arg [...]]\n");
@@ -653,8 +752,15 @@ void fg_help(){
 }
 
 
-void fgpri(char **, int){
-
+void fgpri(char ** tokens, int token_number){
+	pid_t son;
+	if(!((son=fork()))){
+		execpri(tokens, token_number);//todo add to process list
+		exit(-1);
+	}else if(son != -1)
+		waitpid(son, NULL, 0);
+	else
+		perror("ERROR ON FORKING");
 }
 void fgpri_help(){
 	printf("\tfgpri prio [varName [...]] execName [arg [...]]\n");
@@ -666,8 +772,15 @@ void fgpri_help(){
 }
 
 
-void back(char **, int){
-
+void back(char ** tokens, int token_number){
+	pid_t son;
+	if(!((son=fork()))){
+		exec(tokens, token_number);//todo add to process list
+		exit(-1);
+	}else if(son != -1)
+		return;
+	else
+		perror("ERROR ON FORKING");
 }
 void back_help(){
 	printf("\tback [varName [...]] execName [arg [...]]\n");
@@ -678,8 +791,15 @@ void back_help(){
 }
 
 
-void backpri(char **, int){
-
+void backpri(char ** tokens, int token_number){
+	pid_t son;
+	if(!((son=fork()))){
+		execpri(tokens, token_number);//todo add to process list
+		exit(-1);
+	}else if(son != -1)
+		return;
+	else
+		perror("ERROR ON FORKING");
 }
 void backpri_help(){
 	printf("\tbackpri prio [varName [...]] execName [arg [...]]\n");
@@ -692,7 +812,14 @@ void backpri_help(){
 
 
 void listjobs(char **, int){
+	if(!list_length(jobs)){
+		printf("Jobs list is empty");
+		return;
+	}
 
+	for(int i = 0; i < list_length(jobs); i++){
+		printf("%5i\n", *(int *)list_get(jobs, i));
+	}
 }
 void listjobs_help(){
     printf("\tlistjobs\n");
@@ -709,6 +836,6 @@ void deljobs_help(){
     printf("-sig:\tdeletes every signaled process\n");
 }
 
-void generic_execute(char **, int){
-
+void generic_execute(char ** tokens, int token_number){
+	fg(tokens, token_number);
 }

@@ -18,6 +18,7 @@ list history;
 list pmap;
 list enviroment;
 list search;
+list jobs;
 
 int var1;
 int var2;
@@ -294,6 +295,7 @@ void shared_vars_init(){
     pmap = list_init();
     enviroment = list_init();
     search = list_init();
+    jobs = list_init();
     files_init();
 }
 
@@ -320,8 +322,11 @@ void shared_vars_exit(){
         free(list_pop(pmap));
     while(list_length(search))
         free(list_pop(search));
+    while(list_length(jobs))
+        free(list_pop(jobs));
     list_free(pmap);
     list_free(enviroment);
     list_free(search);
+    list_free(jobs);
     files_exit();
 }

@@ -47,6 +47,7 @@ extern list blocks;
 extern list files;
 extern list history;
 extern list search;
+extern list jobs;
 
 extern int var1;
 extern int var2;

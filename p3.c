@@ -8,6 +8,7 @@
 #include <termio.h>
 
 #include "P0/command_manager.h"
+#include "P3/process.h"
 #include "utils/shared_vars.h"
 
 struct termios old_tio;
@@ -69,7 +70,7 @@ int main(int, char **, char ** mainEnv){
         interpreter_code = comm.code;
 
         if(interpreter_code == NOTFOUND){
-            fprintf(stderr, "ERROR AL BUSCAR COMANDO: NO ENCONTRADO\n");
+            generic_execute(tokens, token_number);
             continue;
         }
 

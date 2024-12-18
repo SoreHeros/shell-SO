@@ -76,6 +76,13 @@ command_entry commands[] =
                     { "fork",    NORMAL,        fork_command,    fork_help},
                     { "subsvar",    NORMAL,        subsvar,    subsvar_help},
                     { "exec",    NORMAL,        exec,    exec_help},
+                    { "execpri",    NORMAL,        execpri,    execpri_help},
+                    { "fg",    NORMAL,        fg,    fg_help},
+                    { "fgpri",    NORMAL,        fgpri,    fgpri_help},
+                    { "back",    NORMAL,        back,    back_help},
+                    { "backpri",    NORMAL,        backpri,    backpri_help},
+                    { "search",    NORMAL,        search_command,    search_help},
+                    { "listjobs",    NORMAL,        listjobs,    listjobs_help},
         };
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);
