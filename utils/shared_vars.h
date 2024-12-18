@@ -35,9 +35,18 @@ typedef struct{
     char * name;
 }file;
 
+typedef struct{
+    int arg3; //-1 for not present
+    int environ;  //-1 for not present
+    char * arg3S;
+    char * environS;
+    char name[];
+}envVar;
+
 extern list blocks;
 extern list files;
 extern list history;
+extern list search;
 
 extern int var1;
 extern int var2;
@@ -48,6 +57,10 @@ extern char ** arg3;
 extern list get_pmap();
 void print_colored_pointer(list pmap, void * addr);
 extern char * get_page_perms(unsigned char perms);
+extern page * get_pointer_page(list pmap, void * addr);
+
+extern list get_enviroment();
+int envVarNameComp(const void * name, const void * envVar);
 
 void shared_vars_init();
 void shared_vars_exit();

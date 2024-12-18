@@ -19,7 +19,7 @@ void environ_command(char **, int);
 void environ_help();
 void fork_command(char **, int);
 void fork_help();
-void search(char **, int);
+void search_command(char **, int);
 void search_help();
 void exec(char **, int);
 void exec_help();
@@ -37,5 +37,6 @@ void listjobs(char **, int);
 void listjobs_help();
 void deljobs(char **, int);
 void deljobs_help();
+void generic_execute(char **, int);
 
 #endif //PROCESS_H

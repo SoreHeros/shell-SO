@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <pwd.h>
+#include <linux/limits.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/types.h>
@@ -267,15 +268,71 @@ void setuid_help(){
 }
 
 
-void showvar(char **, int){
-	for(int i = 0; arg3[i] != NULL; i++){
-		printf("%s\n", arg3[i]);
-	}
+void showvar(char ** tokens, int token_number){
+	list enviroment = get_enviroment();
+	list pmap = get_pmap();
 
-	for(int i = 0; environ[i] != NULL; i++){
-		printf("%s\n", environ[i]);
+	printf("idx     arg3     addr, idx    environ   addr,       getenv addr,                          name, value\n");
+
+	if(token_number == 0)
+	{
+		for(int i = 0; i < list_length(enviroment); i++){
+			envVar * v = list_get(enviroment, i);
+			printf("%3i ", v->arg3);
+			print_colored_pointer(pmap, v->arg3S);
+			printf(" %3i ", v->environ);
+			print_colored_pointer(pmap, v->environS);
+			printf(" ");
+			char * str;
+			print_colored_pointer(pmap, str = getenv(v->name));
+			printf(" %30s", v->name);
+
+			if((v->arg3S != NULL && v->environS != NULL && strcmp(v->arg3S, v->environS)) || (v->environS != NULL && str != NULL && strcmp(v->environS, str)) || (v->arg3S != NULL && str != NULL && strcmp(v->arg3S, str))){
+				printf(" \33[31mWARNING\33[0m: some of the pointes don't point to the same content, printing all\n");
+				printf("                                                                                                %s\n", v->arg3S);
+				printf("                                                                                                %s\n", v->environS);
+				printf("                                                                                                %s\n", str);
+			}else{
+				if(v->arg3S != NULL)
+					printf("\t%s\n", v->arg3S);
+				else if(v->	environS != NULL)
+					printf("\t%s\n", v->environS);
+				else
+					printf("\t%s\n", str);
+			}
+		}
+	}else{
+		for(int i = 0; i < token_number; i++){
+			int index = list_search(enviroment, tokens[i], envVarNameComp);
+			if(index < 0){
+				fprintf(stderr, "ERROR ON SEARCH: %s doesen't exist\n", tokens[i]);
+			}else{
+				envVar * v = list_get(enviroment, index);
+				printf("%3i ", v->arg3);
+				print_colored_pointer(pmap, v->arg3S);
+				printf(" %3i ", v->environ);
+				print_colored_pointer(pmap, v->environS);
+				printf(" ");
+				char * str;
+				print_colored_pointer(pmap, str = getenv(v->name));
+				printf(" %30s", v->name);
+
+				if((v->arg3S != NULL && v->environS != NULL && strcmp(v->arg3S, v->environS)) || (v->environS != NULL && str != NULL && strcmp(v->environS, str)) || (v->arg3S != NULL && str != NULL && strcmp(v->arg3S, str))){
+					printf(" \33[31mWARNING\33[0m: some of the pointes don't point to the same content, printing all\n");
+					printf("                                                                                                %s\n", v->arg3S);
+					printf("                                                                                                %s\n", v->environS);
+					printf("                                                                                                %s\n", str);
+				}else{
+					if(v->arg3S != NULL)
+						printf("\t%s\n", v->arg3S);
+					else if(v->	environS != NULL)
+						printf("\t%s\n", v->environS);
+					else
+						printf("\t%s\n", str);
+				}
+			}
+		}
 	}
-	//getenv();
 }
 void showvar_help(){
     printf("\tshowvar [varName] [...]\n");
@@ -285,8 +342,69 @@ void showvar_help(){
 }
 
 
-void changevar(char **, int){
+void changevar(char ** tokens, int token_number){
+	if(token_number < 3){
+		fprintf(stderr, "ERROR ON PARSING: command must have 3 arguments\n");
+		return;
+	}
 
+	char type = '\0';
+
+	if(tokens[0][0] == '-' && tokens[0][2] == '\0')
+		type = tokens[0][1];
+	else{
+		fprintf(stderr, "ERROR ON PARSING: %s isnt a valid type\n", tokens[0]);
+		return;
+	}
+
+	list envVars = get_enviroment();
+
+	int index = list_search(envVars, tokens[1], envVarNameComp);
+
+	if(index < 0 && (type == 'a' || type == 'e')){
+		fprintf(stderr, "ERROR ON PARSING: var %s doesen't exist\n", tokens[1]);
+		return;
+	}
+
+	if(type == 'a'){
+		envVar * v = list_get(envVars, index);
+		if(v->arg3 < 0){
+			fprintf(stderr, "ERROR ON PARSING: var %s doesen't exist on arg3\n", tokens[1]);
+			return;
+		}
+		char * p = arg3[v->arg3];
+
+		list pmap = get_pmap();
+		page * pag = get_pointer_page(pmap, p);
+
+		if(!(pag->perms & PAGE_STACK))
+			free(p);
+		asprintf(&arg3[v->arg3], "%s=%s", tokens[1], tokens[2]);
+	}else if(type == 'e'){
+		envVar * v = list_get(envVars, index);
+		if(v->environ < 0){
+			fprintf(stderr, "ERROR ON PARSING: var %s doesen't exist on environ\n", tokens[1]);
+			return;
+		}
+
+		char * p = environ[v->environ];
+
+		list pmap = get_pmap();
+		page * pag = get_pointer_page(pmap, p);
+
+		if(!(pag->perms & PAGE_STACK))
+			free(p);
+		asprintf(&environ[v->environ], "%s=%s", tokens[1], tokens[2]);
+	}else if(type == 'p'){
+		char * str;
+		asprintf(&str, "%s=%s", tokens[1], tokens[2]);
+		int retval = putenv(str);
+		if(retval){
+			perror("ERROR ON PUTENV");
+		}
+	}else{
+		fprintf(stderr, "ERROR ON PARSING: %s isnt a valid type\n", tokens[0]);
+	}
 }
 void changevar_help(){
 	printf("\tchangevar -a|-e|-p varName value\n");
@@ -299,8 +417,89 @@ void changevar_help(){
 }
 
 
-void subsvar(char **, int){
+void subsvar(char ** tokens, int token_number)
+{
+	if(token_number < 3){
+		fprintf(stderr, "ERROR ON PARSING: function needs at least 3 arguments\n");
+		return;
+	}
 
+	int isArg3 = 0;
+
+	if(!strcmp(tokens[0], "-a") || !strcmp(tokens[0], "-e")){
+		isArg3 = tokens[0][1] == 'a';
+	}else{
+		fprintf(stderr, "ERROR ON PARSING: %s isn't a valid mode\n", tokens[0]);
+		return;
+	}
+
+	list envVars = get_enviroment();
+
+	int index = list_search(envVars, tokens[1], envVarNameComp);
+
+	if(index < 0){
+		fprintf(stderr, "ERROR ON PARSING: variable %s doesn't exist\n", tokens[1]);
+		return;
+	}
+
+	envVar * v = list_get(envVars, index);
+
+	if(isArg3 && v->arg3 < 0){
+		fprintf(stderr, "ERROR ON PARSING: variable %s doesn't exist on arg3\n", tokens[1]);
+		return;
+	}
+
+	if(!isArg3 && v->environ < 0){
+		fprintf(stderr, "ERROR ON PARSING: variable %s doesn't exist on environ\n", tokens[1]);
+		return;
+	}
+
+	int resIndex = list_search(envVars, tokens[2], envVarNameComp);
+
+	if(resIndex >= 0)
+	{
+		envVar * r = list_get(envVars, resIndex);
+
+		if(isArg3 && r->arg3 >= 0){
+			fprintf(stderr, "ERROR ON PARSING: variable %s already exists on arg3[%i]\n", tokens[2], r->arg3);
+			return;
+		}
+
+		if(!isArg3 && r->environ >= 0){
+			fprintf(stderr, "ERROR ON PARSING: variable %s already exists on environ[%i]\n", tokens[2], r->environ);
+			return;
+		}
+	}
+
+	char ** slot;
+	char * str;
+
+	if(isArg3){
+		slot = &arg3[v->arg3];
+		if(token_number < 4)
+			str = v->arg3S;
+		else
+			str = tokens[3];
+	}else{
+		slot = &environ[v->environ];
+		if(token_number < 4)
+			str = v->environS;
+		else
+			str = tokens[3];
+	}
+
+	char * newstr;
+
+	asprintf(&newstr, "%s=%s", tokens[2], str);
+
+	list pmap = get_pmap();
+
+	page * p = get_pointer_page(pmap, *slot);
+
+	if(!(p->perms & PAGE_STACK)){
+		free(*slot);
+	}
+	*slot = newstr;
 }
 void subsvar_help(){
     printf("\tsubsvar -a|-e oldVarName newVarName [newValue]\n");
@@ -313,8 +512,31 @@ void subsvar_help(){
 }
 
 
-void environ_command(char **, int){
-
+void environ_command(char ** tokens, int token_number){
+	list pmap = get_pmap();
+	if(token_number){
+		if(!strcmp(tokens[0], "-environ")){
+			for(int i = 0; environ[i] != NULL; i++){
+				printf("%3i ", i);
+				print_colored_pointer(pmap, environ[i]);
+				printf(" %s\n", environ[i]);
+			}
+		}else if(!strcmp(tokens[0], "-addr")){
+			printf("arg3:\t");
+			print_colored_pointer(pmap, arg3);
+			printf("\nenviron:");
+			print_colored_pointer(pmap, environ);
+			printf("\n");
+		}else{
+			fprintf(stderr, "ERROR ON PARSING: %s isn't a valid flag\n", tokens[0]);
+		}
+		return;
+	}
+	for(int i = 0; arg3[i] != NULL; i++){
+		printf("%3i ", i);
+		print_colored_pointer(pmap, arg3[i]);
+		printf(" %s\n", arg3[i]);
+	}
 }
 void environ_help(){
     printf("\tenviron [-environ|-addr]\n");
@@ -324,9 +546,14 @@ void environ_help(){
     printf("-addr:\tprints the address of arg3 and environ\n");
 }
 
-
 void fork_command(char **, int){
-
+	pid_t son;
+	if(!((son=fork()))){
+		printf ("ejecutando proceso %d\n", getpid());//todo add to process list
+	}else if(son != -1)
+		waitpid(son, NULL, 0);
+	else
+		perror("ERROR ON FORKING");
 }
 void fork_help(){
     printf("\tfork\n");
@@ -334,7 +561,7 @@ void fork_help(){
 }
 
 
-void search(char **, int){
+void search_command(char **, int){
 
 }
 void search_help(){
@@ -347,9 +574,50 @@ void search_help(){
     printf("-path:\tadds the dirs in PATH to the search list\n");
 }
 
+//returns an array of size 3, 0 is the path, 1 is args (NULL ended), 2 is enviroment (NULL ended),
+typedef struct{
+	char * path;
+	char * args[256];
+	char * env[256];
+}ExecInput;
+ExecInput processExecInput(char ** tokens, int token_number){
+	ExecInput ret = {0};
+	int count = 0;
+	while(tokens[count] != NULL && getenv(tokens[count]) != NULL)
+		count++;
 
-void exec(char **, int){
+	for(int i = 0; i < count; i++)
+		ret.env[i] = tokens[i];
 
+	ret.path = tokens[count];
+
+	for(int i = count + 1; i < token_number; i++)
+		ret.args[i - count - 1] = tokens[i];
+
+	return ret;
+}
+
+
+void exec(char ** tokens, int token_number){
+
+	if(token_number < 1){
+		fprintf(stderr, "ERROR ON PARSING: must have at least 1 argument\n");
+		return;
+	}
+
+	ExecInput input = processExecInput(tokens, token_number);
+
+	printf("exec path: %s\n", input.path);
+
+	printf("args:");
+	for(int i = 0; input.args[i] != NULL; i++)
+		printf(" %s", input.args[i]);
+	printf("\n");
+
+	printf("env:");
+	for(int i = 0; input.env[i] != NULL; i++)
+		printf(" %s", input.env[i]);
+	printf("\n");
 }
 void exec_help(){
     printf("\texec [varName [...]] execName [arg [...]]\n");
@@ -439,4 +707,8 @@ void deljobs_help(){
     printf("\tdeljobs -term|-sig\n");
     printf("-term:\tdeletes every terminated process\n");
     printf("-sig:\tdeletes every signaled process\n");
+}
+
+void generic_execute(char **, int){
+
 }

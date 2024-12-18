@@ -71,6 +71,11 @@ command_entry commands[] =
                     { "getuid",    NORMAL,        getuid_command,    getuid_help},
                     { "setuid",    NORMAL,        setuid_command,    setuid_help},
                     { "showvar",    NORMAL,        showvar,    showvar_help},
+                    { "changevar",    NORMAL,        changevar,    changevar_help},
+                    { "environ",    NORMAL,        environ_command,    environ_help},
+                    { "fork",    NORMAL,        fork_command,    fork_help},
+                    { "subsvar",    NORMAL,        subsvar,    subsvar_help},
+                    { "exec",    NORMAL,        exec,    exec_help},
         };
 command_entry ** commands_pointer;
 int commands_len = sizeof(commands) / sizeof(command_entry);

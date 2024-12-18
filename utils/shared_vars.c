@@ -11,18 +11,77 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/sysmacros.h>
 
 list blocks;
 list files;
 list history;
 list pmap;
+list enviroment;
+list search;
 
 int var1;
 int var2;
 int var3;
 
 char ** arg3;
+extern char ** environ;
+
+int envVarNameComp(const void * name, const void * enVar){
+    return strcmp((char *)name, ((envVar *)enVar)->name);
+}
+
+extern list get_enviroment(){
+    //liberar lista
+    while (list_length(enviroment))
+        free(list_pop(enviroment));
+
+    //añadir environ
+    for(int i = 0; environ[i] != NULL; i++){
+        char * str = environ[i];
+        while(*str != '=')
+            str++;
+        str++;//skip '='
+        int nameLen = str - environ[i];
+        envVar * v = malloc(sizeof(envVar) + nameLen);
+        v->environ = i;
+        v->arg3 = -1;
+        v->environS = str;
+        v->arg3S = NULL;
+        memcpy(v->name, environ[i], nameLen - 1);
+        v->name[nameLen - 1] = '\0';
+        list_append(enviroment, v);
+    }
+
+    //añadir arg3
+    for(int i = 0; arg3[i] != NULL; i++){
+        char * str = arg3[i];
+        while(*str != '=')
+            str++;
+        str++;//skip '='
+        int nameLen = str - arg3[i];
+        char name[nameLen];
+        memcpy(name, arg3[i], nameLen - 1);
+        name[nameLen - 1] = '\0';
+        int index = list_search(enviroment, name, envVarNameComp);
+        if(index < 0){
+            //exists in arg3 but not in environ
+            envVar * v = malloc(sizeof(envVar) + nameLen);
+            v->arg3 = i;
+            v->environ = -1;
+            v->arg3S = str;
+            v->environS = NULL;
+            memcpy(v->name, name, nameLen);
+            list_append(enviroment, v);
+        }else{
+            //exists in both
+            envVar * v = list_get(enviroment, index);
+            v->arg3 = i;
+            v->arg3S = str;
+        }
+    }
+
+    return enviroment;
+}
 
 list pid_pages(int pid, list l){
 
@@ -138,7 +197,7 @@ list get_pmap(){
     return pid_pages(0, pmap);
 }
 
-page * get_pointer_page(void * p, list l){
+page * get_pointer_page(list l, void * p){
     for(int i = 0; i < list_length(l); i++){
         page * pg = list_get(l, i);
         if(pg->start <= p && p < pg->start + pg->length)
@@ -169,7 +228,7 @@ extern char * get_page_perms(unsigned char perms){
 
 void print_colored_pointer(list l, void * addr){
     char code[8] = "\033[90m";
-    page * pg = get_pointer_page(addr, l);
+    page * pg = get_pointer_page(l, addr);
 
     //CODIGO COLORES:
     //NULL      ---
@@ -233,13 +292,36 @@ void files_exit(){
 
 void shared_vars_init(){
     pmap = list_init();
+    enviroment = list_init();
+    search = list_init();
     files_init();
 }
 
 void shared_vars_exit(){
-    while(list_length(pmap)){
-        free(list_pop(pmap));
+    while(list_length(enviroment)){
+        envVar * v = list_pop(enviroment);
+        /*
+        if(v->arg3 >= 0){
+            page * p = get_pointer_page(pmap, v->arg3S);
+
+            if(!(p->perms & PAGE_STACK))
+                free(arg3[v->arg3]);
+        }
+
+        if(v->environ >= 0){
+            page * p = get_pointer_page(pmap, v->environS);
+
+            if(!(p->perms & PAGE_STACK))
+                free(environ[v->environ]);
+        }*/
+        free(v);
     }
+    while(list_length(pmap))
+        free(list_pop(pmap));
+    while(list_length(search))
+        free(list_pop(search));
     list_free(pmap);
+    list_free(enviroment);
+    list_free(search);
     files_exit();
 }

@@ -50,7 +50,7 @@ void mallocs_exit(){
             free(a->addr);
             break;
         case SHARED:
-            printf("WARNING: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i\n", a->key);
+            printf("\33[31mWARNING\33[0m: EXITTING PROCESS WITH OPENED SHARED MEMORY WITH KEY %i\n", a->key);
             break;
         default:
             break;
