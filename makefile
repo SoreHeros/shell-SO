@@ -4,11 +4,11 @@ objects = $(patsubst %.c, %.o, $(wildcard P0/*.c) $(wildcard P1/*.c) $(wildcard 
 flags = -Wall -Wextra
 
 $(result): $(main) $(objects)
-	gcc $(flags) -o $(result) $(main) $(objects)
+	gcc $(flags) -g -o $(result) $(main) $(objects)
 
 #compilar todos los objetos
 %.o: %.c %.h
-	gcc $(flags) -c -o $@ $<
+	gcc $(flags) -c -g -o $@ $<
 
 comp:
 	zip -r9 ../$(result).zip . -x ".*" "*.o" "*.out" "*.md" "*.pdf" "*.txt" "testing*" "cmake*" "$(result)"
